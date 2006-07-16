@@ -3,7 +3,7 @@
 clear all;
 
 % read in the two base wind files (recent sandheads file and Kate's
-% original wind file)
+% original wind file) : Note that Kate's 2001 data until Sep is just a repeat of 2002 -- this will be fixed later by already rotated wind
 
 % data in "sand"
 %load /ocean/shared/SoG/met_data/sand_sept2001-apr2006.mat
@@ -49,6 +49,18 @@ windsand.ux = -windsand.ux;
 windsand.va = -windsand.va;
 
 % where va is now along the Strait toward 305 degrees and ux is across the Strait toward 35 degrees.
+
+% now need to replace the early 2001 data
+				   sep01 = datenum([2001 09 01 0 0 0]);
+				   sep01i = (245-2)*24+1;
+				   if (windsand.mtime(sep01i) ~= sep01) stop; end
+% yes I know stop doesn't work but the problem is a mismatch between indicies.. if this doesn't equal zero you need to fix it
+load SH.str
+Shindex0 = 295168;
+Shindex= 301000-1;
+windsand.ux(1:sep01i-1) = SH(Shindex0:Shindex,8);
+windsand.va(1:sep01i-1) = SH(Shindex0:Shindex,9);
+
 
 % plot time series inconsistencies
 dt = windsand.mtime(2)-windsand.mtime(1);
@@ -207,21 +219,19 @@ end
 
 windsand.mtime = windsand.mtime - datenum([0 0 0 8 0 0]);
 
-% remove first 8 records so that we start Sep 1, 2001
+% remove first s8 records so that we start Jan 1, 2001 
 
 % need to write shortened arrays
 SandWind.mtime = windsand.mtime(9:imax);
-SandWind.u = windsand.u(9:imax);
-SandWind.v = windsand.v(9:imax);
 SandWind.ux = windsand.ux(9:imax);
 SandWind.va = windsand.va(9:imax);
 
-SandWind.comments = 'Winds is in m/s, .u is aligned FROM east, .v is aligned FROM north, .ux is across Strait TO 35 degrees, .va is along Strait TO 305 degrees. Wind is from Sand Heads partially from Kates files (which are despiked and filled) and corrected and updated from sand_sept2001-apr2006.mat.  Time is in mtime format and is PST'
+SandWind.comments = 'Winds is in m/s, .ux is across Strait TO 35 degrees, .va is along Strait TO 305 degrees. Wind is from Sand Heads partially from Kates files (which are despiked and filled) and corrected and updated from sand_sept2001-apr2006.mat. Early 2001 data (Jan-Aug comes from SH.dat file) Time is in mtime format and is PST'
 
-save ('windsand-sept2001-apr2006.mat','SandWind')
+save ('windsand-jan2001-apr2006.mat','SandWind')
 
-SH(:,5) = SandWind.ux;
-SH(:,6) = SandWind.va;
+SandRot(:,5) = SandWind.ux;
+SandRot(:,6) = SandWind.va;
 
 [year month day hour minute second] = datevec(SandWind.mtime);
 
@@ -245,9 +255,9 @@ for i=1:imax-8
    end
 end
 
-SH(:,1) = day;
-SH(:,2) = month;
-SH(:,3) = year;
-SH(:,4) = hour;
+SandRot(:,1) = day;
+SandRot(:,2) = month;
+SandRot(:,3) = year;
+SandRot(:,4) = hour;
 
-save -ascii SHcompRot.dat SH
+save -ascii SHcompRot.dat SandRot
