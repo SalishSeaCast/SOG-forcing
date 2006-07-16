@@ -58,8 +58,9 @@ windsand.va = -windsand.va;
 load SH.str
 Shindex0 = 295168;
 Shindex= 301000-1;
-windsand.ux(1:sep01i-1) = SH(Shindex0:Shindex,8);
-windsand.va(1:sep01i-1) = SH(Shindex0:Shindex,9);
+% Roy using longshore then cross-shore
+windsand.ux(1:sep01i-1) = SH(Shindex0:Shindex,9);
+windsand.va(1:sep01i-1) = SH(Shindex0:Shindex,8);
 
 
 % plot time series inconsistencies
