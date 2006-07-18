@@ -4,6 +4,17 @@ clear all;
 
 % read in the two base wind files (recent sandheads file and Kate's
 % original wind file) : Note that Kate's 2001 data until Sep is just a repeat of 2002 -- this will be fixed later by already rotated wind
+ % and sandheads file has Entrance Island wind for a section and this needs to be fixed too .. 
+% read corrected Sandheads (WVF) from sandhead_apr2006-jul2005.mat first and insert it just before rotating
+
+%data in "sand", move it to Sand05
+load sandhead_apr2005-jul2005.mat
+Sand05 = sand;
+% calculate the u,v components of the wind shere u is wind from the east and v is wind from the north -- weird conversion because direction is a clockwise measure starting from north!
+% this conversion is identical to that in /ocean/rich/home/rescan/wen2/spdir2uv.m
+ Sand05.u = Sand05.wspeed.*sin(Sand05.wdir*(pi/180));
+ Sand05.v = Sand05.wspeed.*cos(Sand05.wdir*(pi/180));
+clear sand;
 
 % data in "sand"
 %load /ocean/shared/SoG/met_data/sand_sept2001-apr2006.mat
@@ -17,6 +28,7 @@ isandmax = 40205;
 load wind.mat
 % index at which mtime=732200
 iwindmax = 32361;
+
 
 % set up array
 
@@ -35,6 +47,24 @@ windsand.v(1:iwindmax) = wind.v(1:iwindmax);
 windsand.mtime(iwindmax+1:imax) = sand.mtime(isandmin+1:isandmax);
 windsand.u(iwindmax+1:imax) = sand.u(isandmin+1:isandmax);
 windsand.v(iwindmax+1:imax) = sand.v(isandmin+1:isandmax);
+
+% now a section of this needs to be substituted from Sand05
+isand05 = 37341;
+% index in windsand that corresponds to first Sand05 data point
+isand05e = 39514;
+% index in windsand that corresponds to last Sand05 data point
+sSand05 = 2639;
+% total number of entries in Sand05, note that 39514-37341+1 = 2174 (big difference is much repeated data in Sand05 file)
+tmax = imax+sSand05-isand05e+isand05-1
+windsand.mtime(isand05+sSand05:tmax) = windsand.mtime(isand05e+1:imax);
+windsand.u(isand05+sSand05:tmax) = windsand.u(isand05e+1:imax);
+windsand.v(isand05+sSand05:tmax) = windsand.v(isand05e+1:imax);
+
+windsand.mtime(isand05:isand05+sSand05-1) = Sand05.mtime(1:sSand05);
+windsand.u(isand05:isand05+sSand05-1) = Sand05.u(1:sSand05);
+windsand.v(isand05:isand05+sSand05-1) = Sand05.v(1:sSand05);
+
+imax = tmax;
 
 % note that wind is in wind from direction, ie +u is from the east, +v is
 % from the north
