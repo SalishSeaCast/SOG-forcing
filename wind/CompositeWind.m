@@ -81,10 +81,11 @@ windsand.va = -windsand.va;
 % where va is now along the Strait toward 305 degrees and ux is across the Strait toward 35 degrees.
 
 % now need to replace the early 2001 data
-				   sep01 = datenum([2001 09 01 0 0 0]);
-				   sep01i = (245-2)*24+1;
-				   if (windsand.mtime(sep01i) ~= sep01) stop; end
+sep01 = datenum([2001 09 01 0 0 0]);
+sep01i = (245-2)*24+1;
+if (windsand.mtime(sep01i) ~= sep01) stop; end
 % yes I know stop doesn't work but the problem is a mismatch between indicies.. if this doesn't equal zero you need to fix it
+
 load SH.str
 Shindex0 = 295168;
 Shindex= 301000-1;
@@ -97,19 +98,20 @@ windsand.va(1:sep01i-1) = SH(Shindex0:Shindex,8);
 dt = windsand.mtime(2)-windsand.mtime(1);
 at0(1:imax-1) = windsand.mtime(2:imax)-windsand.mtime(1:imax-1)-dt;
 
-% fix data time series removing repeated times and linearly interpolating over holes -- not only holes upto 3 hours are handled... beyond that code will "stop"
+% fix data time series removing repeated times and linearly interpolating over holes - Note missing data in Roys is -99  -- note only holes upto 3 hours are handled... beyond that code will "stop"
 small=1e-9;
 prevtime = windsand.mtime(1);
 done = 0;
 i=2;
 while done==0
    at = windsand.mtime(i)-prevtime;
-   if abs(at-dt) > small
+   if abs(at-dt) > small | windsand.ux(i) == -99
        if at==0 
           if windsand.u(i-1)*windsand.v(i-1) == 0 
 % remove the previous one
              'remove'
              [imax-1 i]
+% close gap
              for j=i:imax
                 windsand.u(j-1) = windsand.u(j);
                 windsand.v(j-1) = windsand.v(j);
@@ -122,6 +124,7 @@ while done==0
 % remove the second one
              'remove' 
              [imax-1 i]
+% close gap
              for j=i+1:imax
                 windsand.u(j-1) = windsand.u(j);
                 windsand.v(j-1) = windsand.v(j);
@@ -135,6 +138,7 @@ while done==0
 % remove the second one
              'remove'
              [imax-1 i]
+% close gap
              for j=i+1:imax
                 windsand.u(j-1) = windsand.u(j);
                 windsand.v(j-1) = windsand.v(j);
@@ -143,7 +147,7 @@ while done==0
                 windsand.va(j-1) = windsand.va(j);
              end
              imax = imax-1; 
-        elseif abs(at-0.0417) <0.01
+	elseif abs(at-0.0417) <0.01 & windsand.ux(i) ~= -99
 % leave and hope for the best
            prevtime=windsand.mtime(i);
            i = i +1;
@@ -151,18 +155,20 @@ while done==0
               done = 1
            end
 
-        elseif abs(at-0.0417*2) < 0.01
-% move everything done
-             'fill'
-             [imax+1 i]
-             for j=imax:-1:i
-                windsand.u(j+1) = windsand.u(j);
-                windsand.v(j+1) = windsand.v(j);
-                windsand.mtime(j+1) = windsand.mtime(j);
-                windsand.ux(j+1) = windsand.ux(j);
-                windsand.va(j+1) = windsand.va(j);
+	elseif abs(at-0.0417*2) < 0.01 | (windsand.ux(i) == -99 & windsand.ux(i+1) ~= -99)
+	      if abs(at-0.0417*2) < 0.01
+% move everything down by one
+                'fill'
+                [imax+1 i]
+                for j=imax:-1:i
+                   windsand.u(j+1) = windsand.u(j);
+                   windsand.v(j+1) = windsand.v(j);
+                   windsand.mtime(j+1) = windsand.mtime(j);
+                   windsand.ux(j+1) = windsand.ux(j);
+                   windsand.va(j+1) = windsand.va(j);
+                end
+                imax = imax+1; 
              end
-             imax = imax+1; 
 % and fill
              windsand.u(i) = (windsand.u(i+1)+windsand.u(i-1))/2;
              windsand.v(i) = (windsand.v(i+1)+windsand.v(i-1))/2;
@@ -171,18 +177,20 @@ while done==0
              windsand.va(i) = (windsand.va(i+1)+windsand.va(i-1))/2;
              prevtime=windsand.mtime(i);
              i = i + 1;
-        elseif abs(at-0.0417*3) < 0.01
-% move everything down
-             'fill 2'
-             [imax+2 i]
-             for j=imax:-1:i
-                windsand.u(j+2) = windsand.u(j);
-                windsand.v(j+2) = windsand.v(j);
-                windsand.mtime(j+2) = windsand.mtime(j);
-                windsand.ux(j+2) = windsand.ux(j);
-                windsand.va(j+2) = windsand.va(j);
+	  elseif abs(at-0.0417*3) < 0.01 | (windsand.ux(i) == -99 & windsand.ux(i+1) == -99 & windsand.ux(i+2) ~= -99)
+	     if abs(at-0.0417*3) < 0.01
+% move everything down by 2
+                'fill 2'
+                [imax+2 i]
+                for j=imax:-1:i
+                   windsand.u(j+2) = windsand.u(j);
+                   windsand.v(j+2) = windsand.v(j);
+                   windsand.mtime(j+2) = windsand.mtime(j);
+                   windsand.ux(j+2) = windsand.ux(j);
+                   windsand.va(j+2) = windsand.va(j);
+                end
+                imax = imax+2; 
              end
-             imax = imax+2; 
 % and fill
              windsand.u(i+1) = (2*windsand.u(i+2)+windsand.u(i-1))/3;
              windsand.v(i+1) = (2*windsand.v(i+2)+windsand.v(i-1))/3;
@@ -195,21 +203,23 @@ while done==0
              windsand.mtime(i) = (windsand.mtime(i+2)+2*windsand.mtime(i-1))/3;
              windsand.ux(i) = (windsand.ux(i+2)+2*windsand.ux(i-1))/3;
              windsand.va(i) = (windsand.va(i+2)+2*windsand.va(i-1))/3;
-
              prevtime=windsand.mtime(i);
-             i = i + 1;
-        elseif abs(at-0.0417*4) < 0.01
-% move everything down
-             'fill 3'
-             [imax+3 i]
-             for j=imax:-1:i
-                windsand.u(j+3) = windsand.u(j);
-                windsand.v(j+3) = windsand.v(j);
-                windsand.mtime(j+3) = windsand.mtime(j);
-                windsand.ux(j+3) = windsand.ux(j);
-                windsand.va(j+3) = windsand.va(j);
+	     i = i + 1;
+
+        elseif abs(at-0.0417*4) < 0.01 | (windsand.ux(i) == -99 & windsand.ux(i+1) == -99 & windsand.ux(i+2) == -99 & windsand.ux(i+3) ~= -99)
+	     if abs(at-0.0417*4) < 0.01
+% move everything down by 3
+                'fill 3'
+                [imax+3 i]
+                for j=imax:-1:i
+                   windsand.u(j+3) = windsand.u(j);
+                   windsand.v(j+3) = windsand.v(j);
+                   windsand.mtime(j+3) = windsand.mtime(j);
+                   windsand.ux(j+3) = windsand.ux(j);
+                   windsand.va(j+3) = windsand.va(j);
+                end
+                imax = imax+3; 
              end
-             imax = imax+3; 
 % and fill
              windsand.u(i+2) = (3*windsand.u(i+3)+windsand.u(i-1))/4;
              windsand.v(i+2) = (3*windsand.v(i+3)+windsand.v(i-1))/4;
@@ -257,7 +267,7 @@ SandWind.mtime = windsand.mtime(9:imax);
 SandWind.ux = windsand.ux(9:imax);
 SandWind.va = windsand.va(9:imax);
 
-SandWind.comments = 'Winds is in m/s, .ux is across Strait TO 35 degrees, .va is along Strait TO 305 degrees. Wind is from Sand Heads partially from Kates files (which are despiked and filled) and corrected and updated from sand_sept2001-apr2006.mat. Early 2001 data (Jan-Aug comes from SH.dat file) Time is in mtime format and is PST'
+SandWind.comments = 'Winds is in m/s, .ux is across Strait TO 35 degrees, .va is along Strait TO 305 degrees. Wind is from Sand Heads.  Time is in mtime format and is PST'
 
 save ('windsand-jan2001-apr2006.mat','SandWind')
 
@@ -292,3 +302,26 @@ SandRot(:,3) = year;
 SandRot(:,4) = hour;
 
 save -ascii SHcompRot.dat SandRot
+
+%*************************************
+% Create a UTC unrotated version for the shared directory
+clear sand
+
+% back to UTC
+sand.mtime = windsand.mtime(1:imax) + datenum([0 0 0 8 0 0]);
+
+% wind components
+				   sand.ux = windsand.ux(1:imax);
+				   sand.va = windsand.va(1:imax);
+% change to TO direction
+				   ux = -sand.ux;
+				   va = -sand.va;
+% rotate wind 55 degrees counter-clockwise
+				   theta = 55*pi/180.;
+				   sand.u = ux*cos(theta)-va*sin(theta);
+				   sand.v = ux*sin(theta)+va*cos(theta);
+
+sand.comments = 'Winds is in m/s, .ux is across Strait TO 35 degrees, .va is along Strait TO 305 degrees. u is FROM east. v is FROM north. Wind is from Sand Heads.  Time is in mtime format and is UTC'
+
+				   save ('sand_jan2001-apr2006.mat','sand')
+
