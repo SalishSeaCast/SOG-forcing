@@ -1,0 +1,10 @@
+Plan: From Jan 01, 2001 to Apr 2, 2003 use the data provided to SEA in April 2003.  From Apr 3, 2003 to end, use Kate's data changing the time to LST.
+
+atemp.del, hum.del, cf.del created from sallen.del by splitting the file up in emacs.
+
+atemp.dat, hum.dat, cf.dat created from the .del files by changing ; to space and removing "M"'s
+
+CompositeMet combines the data, fills the SEA data, changes the time on Kate's data
+
+Changed one humidity point by hand Jan 8, 2006 2 LST from 12.3 to 91.0.
+
