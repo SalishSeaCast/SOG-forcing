@@ -1,10 +1,43 @@
-Plan: From Jan 01, 2001 to Apr 2, 2003 use the data provided to SEA in April 2003.  From Apr 3, 2003 to end, use Kate's data changing the time to LST.
+		       Susan's Notes 20-Jul-06
 
-atemp.del, hum.del, cf.del created from sallen.del by splitting the file up in emacs.
+Plan: From Jan 01, 2001 to Apr 2, 2003 use the data provided to SEA in
+April 2003.  From Apr 3, 2003 to end, use Kate's data changing the
+time to LST.
 
-atemp.dat, hum.dat, cf.dat created from the .del files by changing ; to space and removing "M"'s
+atemp.del, hum.del, cf.del created from sallen.del by splitting the
+file up in emacs.
 
-CompositeMet combines the data, fills the SEA data, changes the time on Kate's data
+atemp.dat, hum.dat, cf.dat created from the .del files by changing ;
+to space and removing "M"'s
 
-Changed one humidity point by hand Jan 8, 2006 2 LST from 12.3 to 91.0.
+CompositeMet combines the data, fills the SEA data, changes the time
+on Kate's data
+
+Changed one humidity point by hand Jan 8, 2006 2 LST from 12.3 to
+91.0.
+
+	     Doug's Notes on processRawYVRData.py Script
+			      27-Jul-06
+
+processRawYVRData.py reads a TEXT_HOURLIES file and produces cloud
+fraction, humidity, and air temperature forcing data files for SOG.
+
+processRawYVRData.py -h 
+
+gives an explanation of command line options.  Self-test mode is not
+yet operational.
+
+The results files:
+    cf_yvrTestResult.dat
+    hum_yvrTestResult.dat
+    atemp_yvrTestResult.dat
+were produced by running processRawYVRData.py on yvrTestData.dat, a
+doctored extract from 2 of the TEXT_HOURLIES files that triggers all
+of the error conditions in processRawYVRData.py, as well as producing
+some slightly convincing looking output.  
+
+yvrTestErrors.txt is the list of errors (captured from stderr) that
+the test data produces.
+
+yvrTeststdout.txt is the stdout that the test data produces.
 
