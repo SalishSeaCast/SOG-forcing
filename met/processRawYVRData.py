@@ -49,22 +49,22 @@ data files for the SOG bio-physical model of the Strait of Georgia."""
     # Set options
     parser.add_option("--cf", dest="cf_file",
                       help="name of cloud fraction output file; "
-                      + "defaults to cfYYYYMMDD-YYYYMMDD.dat, "
-                      + "where YYYYMMDD are the start and end dates "
+                      + "defaults to cfYYYYMMDD.dat, "
+                      + "where YYYYMMDD is the start date"
                       + "of the contents of the input data file; "
                       + "if the file exists, data will be appended, "
                       + "unless the -o option is present")
     parser.add_option("--hum", dest="hum_file",
                       help="name of humidity output file; "
-                      + "defaults to humYYYYMMDD-YYYYMMDD.dat, "
-                      + "where YYYYMMDD are the start and end dates "
+                      + "defaults to humYYYYMMDD.dat, "
+                      + "where YYYYMMDD is the start date "
                       + "of the contents of the input data file; "
                       + "if the file exists, data will be appended, "
                       + "unless the -o option is present")
     parser.add_option("--atemp", dest="atemp_file",
                       help="name of air temperature output file; "
-                      + "defaults to atempYYYYMMDD-YYYYMMDD.dat, "
-                      + "where YYYYMMDD are the start and end dates "
+                      + "defaults to atempYYYYMMDD.dat, "
+                      + "where YYYYMMDD is the start date "
                       + "of the contents of the input data file; "
                       + "if the file exists, data will be appended, "
                       + "unless the -o option is present")
