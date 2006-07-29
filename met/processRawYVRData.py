@@ -115,8 +115,8 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
             continue
         # Parse the line it into space-delimited fields
         line = line.split(' ')
-        # Process the line only if the record-type field value is not SP
-        if line[3] != 'SP':
+        # Process the line only if the record-type field value is SA
+        if line[3] == 'SA':
             # Confirm that the station field value is YVR, otherwise
             # raise a warning
             if line[2] != 'YVR':
