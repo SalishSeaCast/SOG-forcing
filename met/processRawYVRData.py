@@ -90,8 +90,6 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
     lines_read = 0
     # Flag to ensure that the first day's data output starts at midnight PST
     firstday = True
-    # Nominal  datetime of the last line read for catching missing data lines
-    last_datetime = None
     # Regular expressions:
     # 5 groups of any characters, separated by /s for numerical met
     # data field
@@ -154,16 +152,27 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                     firstday = False
             # Check for difference of > 30 min between record date/time and
             # nominal time, and raise a warning if found
-            # (Note that subtraction is not defined for datetime.time objects)
             if abs(rec_datetime - nom_datetime) > timedelta(minutes=30):
                 msg = "Warning: at line %i: " % lines_read
                 msg += "rec & nom time differ > 30 min: " 
                 msg += " rec = %s" % rec_datetime.isoformat(' ')
                 msg += "  nom = %s" % nom_datetime.isoformat(' ')
                 err.write(msg + '\n')
+            # Check for data lines with the same nominal time, and
+            # ignore all but the 1st (with warning)
+            try:
+                if nom_datetime.hour == last_datetime.hour:
+                    msg = "Warning: at line %i: " % lines_read
+                    msg += "duplicated data: "
+                    msg += "prev hr = %i PST" % last_datetime.hour
+                    msg += "  current hr = %i PST" % nom_datetime.hour
+                    err.write(msg + '\n')
+                    continue
+            except NameError:
+                pass
             # Check for missing data (> 1 hr between records)
-            if (last_datetime is not None and
-                nom_datetime - last_datetime > timedelta(hours=1)):
+            try:
+                if nom_datetime - last_datetime > timedelta(hours=1):
                     # Raise a warning
                     msg = "Warning: at line %i: " % lines_read
                     msg += "missing data: "
@@ -181,29 +190,30 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                         cf.append(bad_value)
                         hum.append(bad_value)
                         atemp.append(bad_value)
+            except NameError:
+                pass
+            # Find the field that contains the /-delimited
+            # numerical data.  It has 4 /s
+            field = [f for f in line[6:]
+                     if numdata_re.match(f) is not None]
+            if field == []:
+                msg = "Warning: at line %i: " % lines_read
+                msg += "unable to find /-delimited met data"
+                err.write(msg + '\n')
             else:
-                # Find the field that contains the /-delimited
-                # numerical data.  It has 4 /s
-                field = [f for f in line[6:]
-                         if numdata_re.match(f) is not None]
-                if field == []:
-                    msg = "Warning: at line %i: " % lines_read
-                    msg += "unable to find /-delimited met data"
-                    err.write(msg + '\n')
-                else:
-                    num_data = field[0].split('/')
-                # Get cloud fraction value
-                cf.append(get_cloud_fraction(line, rec_datetime, num_data,
-                                             clouds_re, lines_read, err,
-                                             bad_value))
-                # Get air temperature value
-                atemp.append(get_air_temp(num_data, lines_read, err,
-                                          bad_value))
-                # Calculate relative humidity value
-                hum.append(calc_humidity(num_data, lines_read, err, bad_value))
-            # Store nominal datetime to check for missing data
-            last_datetime = nom_datetime
-
+                num_data = field[0].split('/')
+            # Get cloud fraction value
+            cf.append(get_cloud_fraction(line, rec_datetime, num_data,
+                                         clouds_re, lines_read, err,
+                                         bad_value))
+            # Get air temperature value
+            atemp.append(get_air_temp(num_data, lines_read, err,
+                                      bad_value))
+            # Calculate relative humidity value
+            hum.append(calc_humidity(num_data, lines_read, err, bad_value))
+        
+        # Store nominal datetime to check for missing and duplicated data
+        last_datetime = nom_datetime
         # Write data to files, if we're at the end of the day
         if len(cf) == 24:
             prefix = (rec_datetime.year - 2000, rec_datetime.month,
