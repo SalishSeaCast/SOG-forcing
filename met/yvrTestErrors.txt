@@ -1,4 +1,8 @@
 Warning: at line 1: station != YVR
+Warning: at line 10: no cloud fraction numbers found
+Warning: at line 11: air temperature is not a number: 
+Warning: at line 11: air temperature is not a number: 
+Warning: at line 12: dew point temperature is not a number: 
 Warning: at line 14: rec & nom time differ > 30 min:  rec = 2004-07-01 05:35:23  nom = 2004-07-01 05:00:00
 Warning: at line 25: missing data: prev hr = 14 PST  current hr = 16 PST
 Warning: at line 29: unable to find /-delimited met data
