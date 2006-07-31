@@ -105,6 +105,8 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
     fmt += "%.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f\n"
     # File handle for error messages
     err = stderr
+    # Value to insert in output data if there is an error
+    bad_value = 999
 
     # Open the input data file, if it exists
     try:
@@ -117,16 +119,16 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
         # Skip empty lines
         if line == '\n':
             continue
-        # Parse the line it into space-delimited fields
-        line = line.split(' ')
+        # Parse the line it into whitespace-delimited fields
+        line = line.split()
         # Process the line only if the record-type field value is SA
         if line[3] == 'SA':
             # Confirm that the station field value is YVR, otherwise
             # raise a warning
             if line[2] != 'YVR':
                 msg = "Warning: at line %i: " % lines_read
-                msg += "station != YVR\n"
-                err.write(msg)
+                msg += "station != YVR"
+                err.write(msg + '\n')
             # Parse record and nominal date/times, and adjust them to PST
             (rec_datetime, nom_datetime) = parse_times(line)
             # Skip lines until we find midnight PST to start output with
@@ -157,8 +159,8 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                 msg = "Warning: at line %i: " % lines_read
                 msg += "rec & nom time differ > 30 min: " 
                 msg += " rec = %s" % rec_datetime.isoformat(' ')
-                msg += "  nom = %s\n" % nom_datetime.isoformat(' ')
-                err.write(msg)
+                msg += "  nom = %s" % nom_datetime.isoformat(' ')
+                err.write(msg + '\n')
             # Check for missing data (> 1 hr between records)
             if (last_datetime is not None and
                 nom_datetime - last_datetime > timedelta(hours=1)):
@@ -166,9 +168,9 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                     msg = "Warning: at line %i: " % lines_read
                     msg += "missing data: "
                     msg += "prev hr = %i PST" % last_datetime.hour
-                    msg += "  current hr = %i PST\n" % nom_datetime.hour
-                    err.write(msg)
-                    # Fill missing data with 999 to flag it for
+                    msg += "  current hr = %i PST" % nom_datetime.hour
+                    err.write(msg + '\n')
+                    # Fill missing data with bad_value to flag it for
                     # interpolation later
                     if nom_datetime.hour != 0:
                         missing_hrs = range(last_datetime.hour + 1,
@@ -176,9 +178,9 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                     else:
                         missing_hrs = range(last_datetime.hour + 1, 24)
                     for hr in missing_hrs:
-                        cf.append(999)
-                        hum.append(999)
-                        atemp.append(999)
+                        cf.append(bad_value)
+                        hum.append(bad_value)
+                        atemp.append(bad_value)
             else:
                 # Find the field that contains the /-delimited
                 # numerical data.  It has 4 /s
@@ -186,17 +188,19 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                          if numdata_re.match(f) is not None]
                 if field == []:
                     msg = "Warning: at line %i: " % lines_read
-                    msg += "unable to find /-delimited met data\n"
-                    err.write(msg)
+                    msg += "unable to find /-delimited met data"
+                    err.write(msg + '\n')
                 else:
                     num_data = field[0].split('/')
                 # Get cloud fraction value
                 cf.append(get_cloud_fraction(line, rec_datetime, num_data,
-                                             clouds_re, lines_read, err))
+                                             clouds_re, lines_read, err,
+                                             bad_value))
                 # Get air temperature value
-                atemp.append(get_air_temp(num_data))
+                atemp.append(get_air_temp(num_data, lines_read, err,
+                                          bad_value))
                 # Calculate relative humidity value
-                hum.append(calc_humidity(num_data))
+                hum.append(calc_humidity(num_data, lines_read, err, bad_value))
             # Store nominal datetime to check for missing data
             last_datetime = nom_datetime
 
@@ -234,58 +238,96 @@ def parse_times(fields):
 
 
 def get_cloud_fraction(fields, rec_datetime, num_data, clouds_re,
-                       lines_read, err):
+                       lines_read, err, bad_value):
     """Get cloud fraction value."""
     if fields[5] == 'CLR':
         # Clear sky = cloud fraction zero
-        cf = 0
+        return 0
     else:
         if rec_datetime < datetime(2003, 8, 21):
             # Older cloud strings may be inaccurate, so get cloud
             # fraction from summary field; character before last ?
             cloud_data = [f for f in fields[6:] if f.find('?') != -1]
             if cloud_data == []:
-                cf = 999
                 msg = "Warning: at line %i: " % lines_read
-                msg += "unable to find ?-delimited cloud fraction\n"
-                err.write(msg)
+                msg += "unable to find ?-delimited cloud fraction"
+                err.write(msg + '\n')
+                return bad_value
             else:
                 i = cloud_data[0].rfind('?')
                 v = cloud_data[0][i-1:i]
                 if v == 'X':
                     # Overcast sky = cloud fraction 10
-                    cf = 10
+                    return 10
                 else:
-                    cf = int(v)
+                    try:
+                        cf = int(v)
+                    except ValueError:
+                        msg = "Warning: at line %i: " % lines_read
+                        msg += "cloud fraction is not a number"
+                        err.write(msg + '\n')
+                        return bad_value
         else:
             # Parse cloud string from /-delimited field into cloud
             # fractions
             cloud_data = clouds_re.split(num_data[-1])
             # Sum the fractions
-            cf = (sum([int(x) for x in cloud_data if x != '']))
-        if cf > 10 and cf < 999:
+            cfs = [x for x in cloud_data if x != '']
+            if cfs == []:
+                msg = "Warning: at line %i: " % lines_read
+                msg += "no cloud fraction numbers found"
+                err.write(msg + '\n')
+                return bad_value
+            else:
+                try:
+                    cf = sum([int(x) for x in cfs])
+                except:
+                    msg = "Warning: at line %i: " % lines_read
+                    msg += "1 or more cloud fractions not a number"
+                    err.write(msg + '\n')
+                    return bad_value
+        if cf > 10 and cf < bad_value:
             # Cloud fraction must be in range 0 to 10
-            cf = 10
             msg = "Warning: at line %i: " % lines_read
-            msg += "cloud fraction > 10, set to 10\n"
-            err.write(msg)
+            msg += "cloud fraction > 10, set to 10"
+            err.write(msg + '\n')
+            return 10
     return cf
 
 
-def get_air_temp(num_data):
+def get_air_temp(num_data, lines_read, err, bad_value):
     """Get air temperature value."""
     # Multiplied by 10 as SOG expects
-    return 10. * float(num_data[1])
+    try:
+        return 10. * float(num_data[1])
+    except ValueError:
+        msg = "Warning: at line %i: " % lines_read
+        msg += "air temperature is not a number: %s" % num_data[1]
+        err.write(msg + '\n')
+        return bad_value
+    
 
 
-def calc_humidity(num_data):
+def calc_humidity(num_data, lines_read, err, bad_value):
     """Calculate relative humidity value from air temperature and dew
     point temperature using Claudius-Clapeyron equation.
 
     """
     # Temperatures converted to Kelvin:
-    T = float(num_data[1]) + 273.15
-    Td = float(num_data[2]) + 273.15
+    try:
+        T = float(num_data[1]) + 273.15
+    except ValueError:
+        msg = "Warning: at line %i: " % lines_read
+        msg += "air temperature is not a number: %s" % num_data[1]
+        err.write(msg + '\n')
+        return bad_value
+    try:
+        Td = float(num_data[2]) + 273.15
+    except ValueError:
+        msg = "Warning: at line %i: " % lines_read
+        msg += "dew point temperature is not a number: %s" % num_data[2]
+        err.write(msg + '\n')
+        return bad_value
     # Claudius-Clapeyron constants:
     L = 2.453e6
     Rv = 461.5
