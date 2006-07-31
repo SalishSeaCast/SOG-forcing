@@ -131,9 +131,8 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
             (rec_datetime, nom_datetime) = parse_times(line)
             # Skip lines until we find midnight PST to start output with
             if firstday:
-                if rec_datetime.hour != 0:
-                    cf, hum, atemp = [], [], []
-                else:
+                cf, hum, atemp = [], [], []
+                if rec_datetime.hour == 0:
                     # Open output files
                     # Date to use in output file name if it's not specified
                     outfile_date = rec_datetime.strftime('%Y%m%d')
