@@ -92,7 +92,11 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
     firstday = True
     # Nominal  datetime of the last line read for catching missing data lines
     last_datetime = None
-    # Regular expression of all digits for parsing cloud string
+    # Regular expressions:
+    # 5 groups of any characters, separated by /s for numerical met
+    # data field
+    numdata_re = re.compile('.*/.*/.*/.*/.*')
+    # All uppercase letter for parsing cloud string
     clouds_re = re.compile('[A-Z]')
     # Format string for output files
     fmt = "1108447 %i %i %i %i "
@@ -178,8 +182,9 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                         atemp.append(999)
             else:
                 # Find the field that contains the /-delimited
-                # numerical data
-                field = [f for f in line[6:] if f.find('/') != -1]
+                # numerical data.  It has 4 /s
+                field = [f for f in line[6:]
+                         if numdata_re.match(f) is not None]
                 if field == []:
                     msg = "Warning: at line %i: " % lines_read
                     msg += "unable to find /-delimited met data\n"
