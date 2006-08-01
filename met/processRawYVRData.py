@@ -216,8 +216,8 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
         last_datetime = nom_datetime
         # Write data to files, if we're at the end of the day
         if len(cf) == 24:
-            prefix = (rec_datetime.year - 2000, rec_datetime.month,
-                      rec_datetime.day)
+            prefix = (nom_datetime.year - 2000, nom_datetime.month,
+                      nom_datetime.day)
             out = [(cf_out, 82, cf), (hum_out, 80, hum),
                    (atemp_out, 78, atemp)]
             for (f, para, array) in out:
