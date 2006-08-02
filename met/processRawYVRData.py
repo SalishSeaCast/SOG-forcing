@@ -196,11 +196,23 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                     # Fill missing data with bad_value to flag it for
                     # interpolation later
                     if nom_datetime.hour > last_datetime.hour:
+                        # Patch things up during the day
                         missing_hrs = range(last_datetime.hour + 1,
                                             nom_datetime.hour)
-                    else:
-                        missing_hrs = range(last_datetime.hour + 1,
-                                            nom_datetime.hour + 24)
+                    elif nom_datetime.hour == 0:
+                        # Patch things up to the end of the day
+                        missing_hrs = range(last_datetime.hour + 1, 24)
+                    elif nom_datetime.hour > 0:
+                        # Missing data that spans midnight LST is a
+                        # fatal problem
+                        msg = "Error: at line %i: " % lines_read
+                        msg += "missing data spanns midnight LST\n"
+                        msg += "  Please add a dummy 0800 UTC record "
+                        msg += "for %s" % nom_datetime.strftime('%Y/%m/%d')
+                        err.write(msg + '\n')
+                        if verbose:
+                            stdout.write(msg + '\n')
+                        raise SystemExit
                     for hr in missing_hrs:
                         cf.append(bad_value)
                         hum.append(bad_value)
