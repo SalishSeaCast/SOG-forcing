@@ -195,11 +195,12 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                         stdout.write(msg + '\n')
                     # Fill missing data with bad_value to flag it for
                     # interpolation later
-                    if nom_datetime.hour != 0:
+                    if nom_datetime.hour > last_datetime.hour:
                         missing_hrs = range(last_datetime.hour + 1,
                                             nom_datetime.hour)
                     else:
-                        missing_hrs = range(last_datetime.hour + 1, 24)
+                        missing_hrs = range(last_datetime.hour + 1,
+                                            nom_datetime.hour + 24)
                     for hr in missing_hrs:
                         cf.append(bad_value)
                         hum.append(bad_value)
