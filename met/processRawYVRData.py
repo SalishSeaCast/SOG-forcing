@@ -12,7 +12,6 @@ from math import exp
 from optparse import OptionParser
 import re
 from sys import stdout, stderr
-from warnings import warn
 
 
 def main():
@@ -33,7 +32,8 @@ def main():
     # Process the data
     process_data(inputfile=args[0], cf_file=options.cf_file,
                  hum_file=options.hum_file, atemp_file=options.atemp_file,
-                 overwrite=options.overwrite, selftest=options.selftest)
+                 overwrite=options.overwrite, selftest=options.selftest,
+                 verbose=options.verbose)
 
 
 def build_parser():
@@ -75,12 +75,15 @@ data files for the SOG bio-physical model of the Strait of Georgia."""
     parser.add_option("-t", "--selftest",
                       action="store_true", dest="selftest",
                       help="run built-in self-test")
-    parser.set_defaults(overwrite=False, selftest=False)
+    parser.add_option("-v", "--verbose",
+                      action="store_true", dest="verbose",
+                      help="list input file lines and warnings on stdout")
+    parser.set_defaults(overwrite=False, selftest=False, verbose=False)
     return parser
 
 
 def process_data(inputfile, cf_file, hum_file, atemp_file,
-                 overwrite, selftest):
+                 overwrite, selftest, verbose):
     """docstring"""
     # Initializations:
     # Lists for cf, humidity, and temperature to hold 24 hours worth of
@@ -114,6 +117,9 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
     # Read the input data a line at a time
     for line in met_file:
         lines_read += 1
+        # Echo line to stdout if we're in verbose mode
+        if verbose:
+            stdout.write(line)
         # Skip empty lines
         if line == '\n':
             continue
@@ -127,6 +133,8 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                 msg = "Warning: at line %i: " % lines_read
                 msg += "station != YVR"
                 err.write(msg + '\n')
+                if verbose:
+                    stdout.write(msg + '\n')
             # Parse record and nominal date/times, and adjust them to PST
             (rec_datetime, nom_datetime) = parse_times(line)
             # Skip lines until we find midnight PST to start output with
@@ -158,6 +166,8 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                 msg += " rec = %s" % rec_datetime.isoformat(' ')
                 msg += "  nom = %s" % nom_datetime.isoformat(' ')
                 err.write(msg + '\n')
+                if verbose:
+                    stdout.write(msg + '\n')
             # Check for data lines with the same nominal time, and
             # ignore all but the 1st (with warning)
             try:
@@ -167,6 +177,8 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                     msg += "prev hr = %i PST" % last_datetime.hour
                     msg += "  current hr = %i PST" % nom_datetime.hour
                     err.write(msg + '\n')
+                    if verbose:
+                        stdout.write(msg + '\n')
                     continue
             except NameError:
                 pass
@@ -179,6 +191,8 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                     msg += "prev hr = %i PST" % last_datetime.hour
                     msg += "  current hr = %i PST" % nom_datetime.hour
                     err.write(msg + '\n')
+                    if verbose:
+                        stdout.write(msg + '\n')
                     # Fill missing data with bad_value to flag it for
                     # interpolation later
                     if nom_datetime.hour != 0:
@@ -200,17 +214,20 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                 msg = "Warning: at line %i: " % lines_read
                 msg += "unable to find /-delimited met data"
                 err.write(msg + '\n')
+                if verbose:
+                    stdout.write(msg + '\n')
             else:
                 num_data = field[0].split('/')
             # Get cloud fraction value
             cf.append(get_cloud_fraction(line, rec_datetime, num_data,
                                          clouds_re, lines_read, err,
-                                         bad_value))
+                                         bad_value, verbose))
             # Get air temperature value
             atemp.append(get_air_temp(num_data, lines_read, err,
-                                      bad_value))
+                                      bad_value, verbose))
             # Calculate relative humidity value
-            hum.append(calc_humidity(num_data, lines_read, err, bad_value))
+            hum.append(calc_humidity(num_data, lines_read, err, bad_value,
+                                     verbose))
         
         # Store nominal datetime to check for missing and duplicated data
         last_datetime = nom_datetime
@@ -248,7 +265,7 @@ def parse_times(fields):
 
 
 def get_cloud_fraction(fields, rec_datetime, num_data, clouds_re,
-                       lines_read, err, bad_value):
+                       lines_read, err, bad_value, verbose):
     """Get cloud fraction value."""
     if fields[5] == 'CLR':
         # Clear sky = cloud fraction zero
@@ -262,6 +279,8 @@ def get_cloud_fraction(fields, rec_datetime, num_data, clouds_re,
                 msg = "Warning: at line %i: " % lines_read
                 msg += "unable to find ?-delimited cloud fraction"
                 err.write(msg + '\n')
+                if verbose:
+                    stdout.write(msg + '\n')
                 return bad_value
             else:
                 i = cloud_data[0].rfind('?')
@@ -276,6 +295,8 @@ def get_cloud_fraction(fields, rec_datetime, num_data, clouds_re,
                         msg = "Warning: at line %i: " % lines_read
                         msg += "cloud fraction is not a number"
                         err.write(msg + '\n')
+                        if verbose:
+                            stdout.write(msg + '\n')
                         return bad_value
         else:
             # Parse cloud string from /-delimited field into cloud
@@ -287,6 +308,8 @@ def get_cloud_fraction(fields, rec_datetime, num_data, clouds_re,
                 msg = "Warning: at line %i: " % lines_read
                 msg += "no cloud fraction numbers found"
                 err.write(msg + '\n')
+                if verbose:
+                    stdout.write(msg + '\n')
                 return bad_value
             else:
                 try:
@@ -295,17 +318,21 @@ def get_cloud_fraction(fields, rec_datetime, num_data, clouds_re,
                     msg = "Warning: at line %i: " % lines_read
                     msg += "1 or more cloud fractions not a number"
                     err.write(msg + '\n')
+                    if verbose:
+                        stdout.write(msg + '\n')
                     return bad_value
         if cf > 10 and cf < bad_value:
             # Cloud fraction must be in range 0 to 10
             msg = "Warning: at line %i: " % lines_read
             msg += "cloud fraction > 10, set to 10"
             err.write(msg + '\n')
+            if verbose:
+                stdout.write(msg + '\n')
             return 10
     return cf
 
 
-def get_air_temp(num_data, lines_read, err, bad_value):
+def get_air_temp(num_data, lines_read, err, bad_value, verbose):
     """Get air temperature value."""
     # Multiplied by 10 as SOG expects
     try:
@@ -314,11 +341,13 @@ def get_air_temp(num_data, lines_read, err, bad_value):
         msg = "Warning: at line %i: " % lines_read
         msg += "air temperature is not a number: %s" % num_data[1]
         err.write(msg + '\n')
+        if verbose:
+            stdout.write(msg + '\n')
         return bad_value
     
 
 
-def calc_humidity(num_data, lines_read, err, bad_value):
+def calc_humidity(num_data, lines_read, err, bad_value, verbose):
     """Calculate relative humidity value from air temperature and dew
     point temperature using Claudius-Clapeyron equation.
 
@@ -330,6 +359,8 @@ def calc_humidity(num_data, lines_read, err, bad_value):
         msg = "Warning: at line %i: " % lines_read
         msg += "air temperature is not a number: %s" % num_data[1]
         err.write(msg + '\n')
+        if verbose:
+            stdout.write(msg + '\n')
         return bad_value
     try:
         Td = float(num_data[2]) + 273.15
@@ -337,6 +368,8 @@ def calc_humidity(num_data, lines_read, err, bad_value):
         msg = "Warning: at line %i: " % lines_read
         msg += "dew point temperature is not a number: %s" % num_data[2]
         err.write(msg + '\n')
+        if verbose:
+            stdout.write(msg + '\n')
         return bad_value
     # Claudius-Clapeyron constants:
     L = 2.453e6
@@ -345,7 +378,6 @@ def calc_humidity(num_data, lines_read, err, bad_value):
     hum = exp((1. / T - 1. / Td) * L / Rv)
     # Return humidity as a percent value as SOG expects it
     return hum * 100.
-
 
 
 if __name__ == '__main__':
