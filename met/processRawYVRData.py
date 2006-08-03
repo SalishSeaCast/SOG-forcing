@@ -229,6 +229,10 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                 err.write(msg + '\n')
                 if verbose:
                     stdout.write(msg + '\n')
+                cf.append(bad_value)
+                hum.append(bad_value)
+                atemp.append(bad_value)
+                continue
             else:
                 num_data = field[0].split('/')
             # Get cloud fraction value
