@@ -217,6 +217,12 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                         cf.append(bad_value)
                         hum.append(bad_value)
                         atemp.append(bad_value)
+                    # Write data to files, if we're at the end of the day
+                    if len(cf) == 24:
+                        write_output_line(nom_datetime, fmt, cf, hum, atemp,
+                                          cf_out, hum_out, atemp_out)
+                        # Reset data list, ready for next day
+                        cf, hum, atemp = [], [], []
             except NameError:
                 # last_datetime does not exist on the 1st pass through
                 # the loop
@@ -235,21 +241,13 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                 cf.append(bad_value)
                 hum.append(bad_value)
                 atemp.append(bad_value)
-                # *** It's very ugly, but we need to have the same
-                # *** code here to potentially write output data lines as
-                # *** we have at the end of the loop.  BDFL, please
-                # *** forgive me...
                 # Store nominal datetime to check for missing and
                 # duplicated data
                 last_datetime = nom_datetime
                 # Write data to files, if we're at the end of the day
                 if len(cf) == 24:
-                    prefix = (nom_datetime.year - 2000, nom_datetime.month,
-                              nom_datetime.day)
-                    out = [(cf_out, 82, cf), (hum_out, 80, hum),
-                           (atemp_out, 78, atemp)]
-                    for (f, para, array) in out:
-                        f.write(fmt % (prefix + (para, ) + tuple(array)))
+                    write_output_line(nom_datetime, fmt, cf, hum, atemp,
+                                      cf_out, hum_out, atemp_out)
                     # Reset data list, ready for next day
                     cf, hum, atemp = [], [], []
                 # Proceed to the next input line
@@ -271,12 +269,14 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
         last_datetime = nom_datetime
         # Write data to files, if we're at the end of the day
         if len(cf) == 24:
-            prefix = (nom_datetime.year - 2000, nom_datetime.month,
-                      nom_datetime.day)
-            out = [(cf_out, 82, cf), (hum_out, 80, hum),
-                   (atemp_out, 78, atemp)]
-            for (f, para, array) in out:
-                f.write(fmt % (prefix + (para, ) + tuple(array)))
+##             prefix = (nom_datetime.year - 2000, nom_datetime.month,
+##                       nom_datetime.day)
+##             out = [(cf_out, 82, cf), (hum_out, 80, hum),
+##                    (atemp_out, 78, atemp)]
+##             for (f, para, array) in out:
+##                 f.write(fmt % (prefix + (para, ) + tuple(array)))
+            write_output_line(nom_datetime, fmt, cf, hum, atemp,
+                              cf_out, hum_out, atemp_out)
             # Reset data list, ready for next day
             cf, hum, atemp = [], [], []
 
@@ -301,6 +301,16 @@ def parse_times(fields):
     rec_datetime -= timedelta(hours=8)
     nom_datetime -= timedelta(hours=8)
     return (rec_datetime, nom_datetime)
+
+
+def write_output_line(nom_datetime, fmt, cf, hum, atemp, cf_out, hum_out,
+                      atemp_out):
+    """Write a line of processed data to each of the output files."""
+    prefix = (nom_datetime.year - 2000, nom_datetime.month,
+              nom_datetime.day)
+    out = [(cf_out, 82, cf), (hum_out, 80, hum), (atemp_out, 78, atemp)]
+    for (f, para, array) in out:
+        f.write(fmt % (prefix + (para, ) + tuple(array)))
 
 
 def get_cloud_fraction(fields, rec_datetime, num_data, clouds_re,
