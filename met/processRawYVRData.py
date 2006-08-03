@@ -218,6 +218,8 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                         hum.append(bad_value)
                         atemp.append(bad_value)
             except NameError:
+                # last_datetime does not exist on the 1st pass through
+                # the loop
                 pass
             # Find the field that contains the /-delimited
             # numerical data.  It has 4 /s
@@ -233,9 +235,23 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                 cf.append(bad_value)
                 hum.append(bad_value)
                 atemp.append(bad_value)
+                # *** It's very ugly, but we need to have the same
+                # *** code here to potentially write output data lines as
+                # *** we have at the end of the loop.  BDFL, please
+                # *** forgive me...
                 # Store nominal datetime to check for missing and
                 # duplicated data
                 last_datetime = nom_datetime
+                # Write data to files, if we're at the end of the day
+                if len(cf) == 24:
+                    prefix = (nom_datetime.year - 2000, nom_datetime.month,
+                              nom_datetime.day)
+                    out = [(cf_out, 82, cf), (hum_out, 80, hum),
+                           (atemp_out, 78, atemp)]
+                    for (f, para, array) in out:
+                        f.write(fmt % (prefix + (para, ) + tuple(array)))
+                    # Reset data list, ready for next day
+                    cf, hum, atemp = [], [], []
                 # Proceed to the next input line
                 continue
             else:
@@ -269,7 +285,8 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
 
 
 def parse_times(fields):
-    """docstring"""
+    """Parse the record date/time, and nominal time into datetime
+    objects, and adjust them from UTC to PST."""
     # Parse the record date and time fields into a datetime object
     year, month, day = fields[0].split('/')
     year, month, day = int(year), int(month), int(day)
