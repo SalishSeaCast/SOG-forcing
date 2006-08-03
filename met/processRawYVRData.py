@@ -193,18 +193,17 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                     err.write(msg + '\n')
                     if verbose:
                         stdout.write(msg + '\n')
-                    # Fill missing data with bad_value to flag it for
-                    # interpolation later
+                    # Fill missing data during the day with bad_value
+                    # to flag it for interpolation later
                     if nom_datetime.hour > last_datetime.hour:
-                        # Patch things up during the day
                         missing_hrs = range(last_datetime.hour + 1,
                                             nom_datetime.hour)
                     elif nom_datetime.hour == 0:
-                        # Patch things up to the end of the day
+                        # End of the day requires special handling
                         missing_hrs = range(last_datetime.hour + 1, 24)
+                    # Missing data that spans midnight LST is a fatal
+                    # problem
                     elif nom_datetime.hour > 0:
-                        # Missing data that spans midnight LST is a
-                        # fatal problem
                         msg = "Error: at line %i: " % lines_read
                         msg += "missing data spans midnight LST\n"
                         msg += "  Please add a dummy 0800 UTC record "
@@ -217,9 +216,12 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                         cf.append(bad_value)
                         hum.append(bad_value)
                         atemp.append(bad_value)
-                    # Write data to files, if we're at the end of the day
+                    # Write data to files, if we're at the end of the
+                    # day, but note that it's the previous day's data
+                    # we're writing
                     if len(cf) == 24:
-                        write_output_line(nom_datetime, fmt, cf, hum, atemp,
+                        write_datetime = nom_datetime - timedelta(days=1)
+                        write_output_line(write_datetime, fmt, cf, hum, atemp,
                                           cf_out, hum_out, atemp_out)
                         # Reset data list, ready for next day
                         cf, hum, atemp = [], [], []
