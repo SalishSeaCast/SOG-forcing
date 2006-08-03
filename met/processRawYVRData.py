@@ -206,7 +206,7 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                         # Missing data that spans midnight LST is a
                         # fatal problem
                         msg = "Error: at line %i: " % lines_read
-                        msg += "missing data spanns midnight LST\n"
+                        msg += "missing data spans midnight LST\n"
                         msg += "  Please add a dummy 0800 UTC record "
                         msg += "for %s" % nom_datetime.strftime('%Y/%m/%d')
                         err.write(msg + '\n')
@@ -229,9 +229,14 @@ def process_data(inputfile, cf_file, hum_file, atemp_file,
                 err.write(msg + '\n')
                 if verbose:
                     stdout.write(msg + '\n')
+                # Flag the output as bad values
                 cf.append(bad_value)
                 hum.append(bad_value)
                 atemp.append(bad_value)
+                # Store nominal datetime to check for missing and
+                # duplicated data
+                last_datetime = nom_datetime
+                # Proceed to the next input line
                 continue
             else:
                 num_data = field[0].split('/')
