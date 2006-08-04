@@ -1,19 +1,35 @@
-c   program to merge data delivered to SEA and Kate's downloads of raw data
+c   program to merge data delivered to SEA and Kate's downloads of raw data 
+c     (air temperature and humidity) and Doug's python read of raw data 
+c     (cloud fraction)
 c     compile with: pgf77 -o CompositeMet CompositeMet.f
 c     run with: CompositeMet
 
+      implicit none
 
-
+      integer lotsofroom,nolines,nolines2,hoursperday
+      parameter (lotsofroom=10000)
       parameter (nolines=4847, nolines2=1919,hoursperday=24)
+      integer jan0101,toapril2,fromapril3
       parameter (jan0101=4019,toapril2=4840,fromapril3=823)
-      integer stnno, year(nolines), month(nolines), day(nolines), 
-     >     data, hum(nolines,hoursperday)
+      integer stnno, year(lotsofroom), month(lotsofroom), 
+     >     day(lotsofroom), data, hum(lotsofroom,hoursperday)
       real cstnno, cyear(nolines2), cmonth(nolines2), cday(nolines2), 
      >     cdata, chum(nolines2,hoursperday), thum(hoursperday)
       real store(hoursperday)
       integer count
 
-c all the variables in the code are called humidity but we are going to do it three times: humidity, temperature and cloud fraction.  Only difference is the last one will be written out as an integer
+c internal variabils
+      integer idatatype ! 1 = humidity, 2 = air temp, 3 = cloud fraction
+      integer i,ii ! counters to go through day
+      integer j,k,m ! counters to go through hours
+      integer ifiles ! to step through the different python generated files
+      integer norecords ! to keep track of number of stored records from previous files
+      integer flag ! marks end of file condition
+
+      integer iyear,imonth,iday ! for use with shifting time of Kate's data
+      real uhum ! to store a value
+
+c all the variables in the code are called humidity but we are going to do it three times: humidity, temperature and cloud fraction.  Files read in for cf are different because Kate's reading of cloud fraction was inconsistent
 
       do idatatype=1,3
 
@@ -50,20 +66,63 @@ c data from Kate
        if (idatatype.eq.1) then
           open (12,file='hum200123456.dat')
        elseif (idatatype.eq.2) then
-         open (12,file='temp200123456.dat')
-      elseif (idatatype.eq.3) then
-         open (12,file='cf200123456.dat') 
-      else
-         write (*,*) 'Something wrong with idatatype'
-         stop
+          open (12,file='temp200123456.dat')
+       elseif (idatatype.eq.3) then
+          write (*,*) 'Using Dougs python cf read'
+       else
+          write (*,*) 'Something wrong with idatatype'
+          stop
+       endif
+
+       if (idatatype.lt.3) then
+          do i=1,nolines2
+             read (12,*) cstnno,cyear(i),cmonth(i),cday(i),cdata,
+     >            (chum(i,j),j=1,24)
+          enddo
+          
+          close(12)
+       else
+
+c     read python read data for cf
+         norecords = nolines
+         do ifiles = 1, 5
+            if (ifiles.eq.1) then
+               open (12,file='cf20030402.dat')
+            elseif (ifiles.eq.2) then
+               open (12,file='cf20040701.dat')
+            elseif (ifiles.eq.3) then
+               open (12,file='cf20041001.dat')
+            elseif (ifiles.eq.4) then
+               open (12,file='cf20050405.dat')
+            elseif (ifiles.eq.5) then
+               open (12,file='cf20050701.dat')
+            else
+               write (*,*) 'something wrong with ifiles'
+               stop
+            endif
+            flag = 0
+            i = norecords+1
+            do while (flag.eq.0)
+               read (12,*,END=1001) stnno, year(i), month(i), day(i), 
+     >              data, (hum(i,j),j=1,24) ! statement 1001 sets flag = 1
+               do j=1,24
+                  if (hum(i,j).eq.999) hum(i,j) = -99999
+               enddo
+               i = i + 1
+               if (year(i-1).le.year(norecords)) then
+                  if (month(i-1).le.month(norecords)) then
+                     if (day(i-1).le.day(norecords)) then
+                        i = i - 1 ! don't increment i, discard this record
+                     endif
+                  endif
+               endif
+ 1002       enddo    ! end of file takes us back here after setting flat to 1
+            close(12)
+            norecords = i - 1
+         enddo
       endif
 
-       do i=1,nolines2
-          read (12,*) cstnno,cyear(i),cmonth(i),cday(i),cdata,
-     >         (chum(i,j),j=1,24)
-       enddo
 
-       close(12)
 
 c    write out combined data (this can be fixed in the future to give a better format)
 
@@ -78,7 +137,11 @@ c    write out combined data (this can be fixed in the future to give a better f
          stop
       endif
 
-       do i=jan0101,toapril2
+c     go through direct cf/atemp/hum data and through python files to look for missing data
+
+       if (idatatype.le.2) norecords = toapril2
+      
+       do i=jan0101,norecords
 
 c     check data for missing values
 
@@ -149,27 +212,33 @@ c     check data for missing values
           write (13,0101) stnno, year(i), month(i), day(i), data, 
      >         (thum(j),j=1,24)
         enddo
-       i = toapril12
-       do k=fromapril3,nolines2-1
-          i = i + 1
-          iyear = cyear(k)
-          imonth = cmonth(k)
-          iday = cday(k)
-          do m=1,16
-             thum(m) = chum(k,m+8)
-          enddo
-          do m=17,24
-             thum(m) = chum(k+1,m-16)
-          enddo
+        if (idatatype.lt.3) then
+c     we are using Kate's humidity or air temperature data and we need to shift it by 8 hours
+           i = toapril2
+           do k=fromapril3,nolines2-1
+              i = i + 1
+              iyear = cyear(k)
+              imonth = cmonth(k)
+              iday = cday(k)
+              do m=1,16
+                 thum(m) = chum(k,m+8)
+              enddo
+              do m=17,24
+                 thum(m) = chum(k+1,m-16)
+              enddo
+              
+              write (13,0101) stnno,iyear,imonth,iday,data,
+     >             (thum(m),m=1,24)
+           enddo
+        endif
 
-          write (13,0101) stnno,iyear,imonth,iday,data,
-     >         (thum(m),m=1,24)
-       enddo
+ 0101   format (2x,i7,1x,i4,1x,i2,1x,i2,1x,i3,24(1x,f6.1))
+        close(13)
+        
+      enddo
 
-
- 0101  format (2x,i7,1x,i4,1x,i2,1x,i2,1x,i3,24(1x,f6.1))
-       close(13)
-
-       enddo
-
-       end
+      stop
+ 1001 flag = 1
+      goto 1002
+      
+      end
