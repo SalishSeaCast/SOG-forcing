@@ -15,3 +15,13 @@ station information, the '/' and the '^M'
 
 As the Englishman data only goes to the end of 2004 at this point, I have
 not made 2001_2005 files.  Continue to use eng200123456.dat for now.
+
+Formatting in eng200123456.dat file was adjusted to make year, month,
+and day fields integers, so that it can be read by SOG compiled with
+g95.  The commands to do the reformatting are:
+
+      ../formatDataFile "%i %i %i %e %e" < eng200123456.dat > spam
+      mv spam eng2001223456.dat
+
+# end of file
+
