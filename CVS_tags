@@ -1,0 +1,15 @@
+-*- mode: text -*-
+$Id$
+$Source$
+
+List of tags in this project's repository and their meaning:
+
+UBC_EOS	- VENDOR_TAG used for initial import
+
+v0_5	- RELEASE_TAG used for initial import
+
+EPOC_2006 - immediately before code was branched to do the runs for
+            the paper presented at the EPOC 2006 conference
+            (TImberline Lodge, Mt. Hood, OR)
+
+# end of file
