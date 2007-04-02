@@ -59,6 +59,7 @@ class UnknownParameterError(METARDataError): pass
 class UnknownStationError(METARDataError): pass
 class UnexpectedPageError(METARDataError): pass
 class InvalidDateError(METARDataError): pass
+class EndDateWithoutBeginError(METARDataError): pass
     
 
 class METARdata:
@@ -180,15 +181,16 @@ def parse_options():
     help = "run module doctest unit tests"
     parser.add_option('-t', '--test', help=help,
                       action='store_true', dest='doctest', default=False)
-    help = "be verbose"
+    help = "be verbose in output from unit tests"
     parser.add_option('-v', '--verbose', help=help,
                       action='store_true', dest='verbose', default=False)
     # Parse the command line options
     options, args = parser.parse_args()
     # Print help message if there is not exactly 1 command line
     # argument
-    if len(args) != 1:
+    if len(args) != 1 or (options.end and not options.begin):
         parser.print_help()
+        raise EndDateWithoutBeginError
     return options, args[0]
 
 
