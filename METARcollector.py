@@ -9,6 +9,7 @@ Exception Classes:
 - `UnknownParameterError`
 - `UnknownStationError`
 - `UnexpectedPageError`
+- `InvalidDateError`
 
 Functions:
 
@@ -52,6 +53,14 @@ from datetime import date, datetime, timedelta
 import urllib
 
 
+# Exceptions:
+class METARDataError(Exception): pass
+class UnknownParameterError(METARDataError): pass
+class UnknownStationError(METARDataError): pass
+class UnexpectedPageError(METARDataError): pass
+class InvalidDateError(METARDataError): pass
+    
+
 class METARdata:
 
     """Retrieve and process METAR weather data from the Plymouth State
@@ -66,7 +75,7 @@ class METARdata:
         """
         self.site = ('http://vortex.plymouth.edu/cgi-bin/gen_statlog-u.cgi')
         """Root of URL to query for data."""
-        yesterday = datetime.now() - timedelta(days=1)
+        yesterday = datetime.today() - timedelta(days=1)
         self.year = yesterday.year
         """Year to get data for."""
         self.month = yesterday.month
@@ -92,13 +101,13 @@ class METARdata:
             raise
         # Validate and clean up the METAR data
         try:
-            self._clean_data()
+            self._clean_data(stn)
         except:
             raise
         return self.data
 
 
-    def _clean_data(self):
+    def _clean_data(self, stn):
         """Validate and clean up the METAR data.
 
         """
@@ -107,9 +116,17 @@ class METARdata:
         if not self.data[0].startswith(
             '<TITLE>Generate WXP 24-Hour Meteogram</TITLE>'):
             raise UnexpectedPageError
-        # Get rid of the <title> and <pre> tag lines
+        # Get rid of the <title> and <pre> tag lines, and the station
+        # location and following blank line
+        self.data = self.data[4:]
+        # Confirm that we got the data for the expected station by
+        # checking the "METAR Data for" line contents
+        if not self.data[0].startswith(
+            ' '.join(("METAR Data for", self.stns[stn]))):
+            raise UnexpectedPageError
+        # Get rid of the "METAR Data for" line and following blank
+        # line
         self.data = self.data[2:]
-        # 
 
 
     def _get_metars(self, stn, kwargs):
@@ -143,18 +160,88 @@ class METARdata:
             raise
 
 
-# Exceptions:
-class METARDataError(Exception): pass
-class UnknownParameterError(METARDataError): pass
-class UnknownStationError(METARDataError): pass
-class UnexpectedPageError(METARDataError): pass
-    
+def parse_options():
+    """Parse the command line options.
 
-def _test():
+    """
+
+    # Build the option parser
+    from optparse import OptionParser
+    desc = ' '.join(("Retrieve the METAR data for the specified station",
+                     "and date range and write it to stdout."))
+    parser = OptionParser(description=desc)
+    parser.usage += ' station'
+    help = "beginning date for METAR data; default=yesterday"
+    parser.add_option('-b', '--begin', help=help,
+                      dest='begin', metavar='yyyy-mm-dd')
+    help = "ending date for METAR data; default=yesterday"
+    parser.add_option('-e', '--end', help=help,
+                      dest='end', metavar='yyyy-mm-dd')
+    help = "run module doctest unit tests"
+    parser.add_option('-t', '--test', help=help,
+                      action='store_true', dest='doctest', default=False)
+    help = "be verbose"
+    parser.add_option('-v', '--verbose', help=help,
+                      action='store_true', dest='verbose', default=False)
+    # Parse the command line options
+    options, args = parser.parse_args()
+    # Print help message if there is not exactly 1 command line
+    # argument
+    if len(args) != 1:
+        parser.print_help()
+    return options, args[0]
+
+
+def _test(verbose):
     import doctest
-    doctest.testmod()
+    doctest.testmod(exclude_empty=True, verbose=verbose)
+
+
+def metar_data(station, begin, end):
+    """Return the METAR data for the specified station and date range.
+
+    """
+
+    def _parse_date(date_str):
+        """Minimal date parser."""
+        yr, mo, day = [int(x) for x in date_str.split('-')]
+        try:
+            return date(yr, mo, day)
+        except ValueError:
+            raise InvalidDateError, begin
+        
+    metar = METARdata()
+    # Validate the beginning and end dates
+    if not begin:
+        return metar.get_met_data(station)
+    else:
+        date1 = _parse_date(begin)
+    if not end:
+        date2 = (datetime.today() - timedelta(days=1)).date()
+    else:
+        date2 = _parse_date(end)
+    # Retrieve the METAR data for the date range
+    metars = []
+    while date1 <= date2:
+        metars.extend(metar.get_met_data(station, year=date1.year,
+                                         month=date1.month, day=date1.day))
+        date1 += timedelta(days=1)
+    return metars
+
+
+def main():
+    # Parse the command line
+    options, station = parse_options()
+    # Run the unit tests, if requested
+    if options.doctest:
+        _test(options.verbose)
+        return
+    # Retrieve the list of METAR data for the specified station and
+    # date range and write it to stdout
+    print ''.join(metar_data(station, options.begin, options.end))
+
 
 if __name__ == "__main__":
-    _test()
+    main()
 
 # end of file
