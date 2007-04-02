@@ -128,6 +128,34 @@ class METARdata:
         # Get rid of the "METAR Data for" line and following blank
         # line
         self.data = self.data[2:]
+        # Date part of timestamp for each line of data
+        datestamp = '%4i %02i %02i' % (self.year, self.month, self.day)
+        #
+        i = 0
+        try:
+            while True:
+                # Continuations from the previous line start with 5
+                # spaces
+                if self.data[i].startswith(' '*5):
+                    # Concatenate continuation to previous line
+                    self.data[i-1] = ' '.join((self.data[i-1][:-1],
+                                               self.data[i][5:]))
+                    # Get rid of continuation text that we just consumed
+                    self.data.pop(i)
+                # Get rid of SPECI prefix
+                if self.data[i].startswith('SPECI'):
+                    self.data[i] = self.data[i][6:]
+                fields = self.data[i].split()
+                # Add METAR prefix if it's missing
+                if fields[0] != 'METAR':
+                    fields.insert(0, 'METAR')
+                    self.data[i] = ' '.join(('METAR', self.data[i]))
+                # Add hour to timestamp, and prepend timestamp to line
+                self.data[i] = ' '.join((datestamp, fields[2][2:4],
+                                         self.data[i]))
+                i += 1
+        except IndexError:
+            pass
 
 
     def _get_metars(self, stn, kwargs):
