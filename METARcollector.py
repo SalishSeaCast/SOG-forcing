@@ -3,6 +3,17 @@
 Retrieve and process METAR weather data from the Plymouth State
 University archive site (vortex.plymouth.edu).
 
+Usage:
+
+- `METARcollector.py [options] station`
+
+Public Classes and Functions:
+
+- `METARdata`: Retrieve and process METAR weather data from the
+  Plymouth State University archive site (vortex.plymouth.edu).
+- `get_met_data()`: Return a list of string of meteorological data for
+  the specified station.
+
 Exception Classes:
 
 - `METARDataError'
@@ -10,15 +21,11 @@ Exception Classes:
 - `UnknownStationError`
 - `UnexpectedPageError`
 - `InvalidDateError`
-
-Functions:
-
-- `get_met_data()`: Return a list of string of meteorological data for
-  the specified station.
+- `EndDateWithoutBeginError`
 
 
-Tests and Examples
-------------------
+Unit Tests
+----------
 
 Create an instance and check the default property values:
   >>> metar = METARdata()
@@ -29,7 +36,9 @@ Create an instance and check the default property values:
   >>> print metar.stns['yvr'], metar.stns['sandheads']
   CYVR CWVF
 
-  >>> print metar.get_met_data('yvr', year=2007, month=4, day=1)
+  >>> print metar.get_met_data('yvr', year=2007, month=4, day=1)[0]
+  2007 04 01 00 METAR CYVR 010000Z 28016G22KT 30SM FEW045 FEW230 09/00 A3005 RMK CU1CI1 SLP175
+  <BLANKLINE>
 
 Test exceptions:
   >>> metar.get_met_data('yvr', spam=42)
@@ -41,6 +50,16 @@ Test exceptions:
   Traceback (most recent call last):
       ...
   UnknownStationError: yyz
+
+  >>> metar_data('yvr', '2007-13-12', None)
+  Traceback (most recent call last):
+      ...
+  InvalidDateError: 2007-13-12
+
+  >>> metar_data('yvr', '2007-04-04', '2007-04-01')
+  Traceback (most recent call last):
+      ...
+  EndDateBeforeBeginError: ('2007-04-04', '2007-04-01')
 
 """
 
@@ -60,6 +79,7 @@ class UnknownStationError(METARDataError): pass
 class UnexpectedPageError(METARDataError): pass
 class InvalidDateError(METARDataError): pass
 class EndDateWithoutBeginError(METARDataError): pass
+class EndDateBeforeBeginError(METARDataError): pass
     
 
 class METARdata:
@@ -96,8 +116,22 @@ class METARdata:
           'yyyy mm dd hh METAR'
 
         """
+        # Validate the common station name and convert it to the
+        # corresponding official station ID
         try:
-            self.data = self._get_metars(stn, kwargs)
+            stn = self.stns[stn]
+        except:
+            raise UnknownStationError, stn
+        # Process the date components in the keyword args into
+        # instance attribute values
+        for kw in kwargs:
+            if kw in ('year', 'month', 'day'):
+                self.__dict__[kw] = kwargs[kw]
+            else:
+                raise UnknownParameterError, (kw, kwargs[kw])
+        # Get the list of METARs
+        try:
+            self.data = self._get_metars(stn)
         except:
             raise
         # Validate and clean up the METAR data
@@ -106,6 +140,25 @@ class METARdata:
         except:
             raise
         return self.data
+
+
+    def _get_metars(self, stn):
+        """Return the METAR data page as a list of strings.
+
+        """
+        # Build the URL parameter string.  Note that order of the
+        # parameters apparently matters to vortex.plymouth.edu, so we
+        # can't use urllib.urlencode()
+        params = '='.join(('ident', stn))
+        params += '&' + '='.join(('pl', 'none0'))
+        params += '&' + '='.join(('yy', str(self.year)[-2:]))
+        params += '&' + '='.join(('mm', '%02d' % self.month))
+        params += '&' + '='.join(('dd', '%02d' % self.day))
+        # Open the URL, and read it into a list of strings
+        try:
+            return urllib.urlopen("%s?%s" % (self.site, params)).readlines()
+        except:
+            raise
 
 
     def _clean_data(self, stn):
@@ -123,14 +176,14 @@ class METARdata:
         # Confirm that we got the data for the expected station by
         # checking the "METAR Data for" line contents
         if not self.data[0].startswith(
-            ' '.join(("METAR Data for", self.stns[stn]))):
+            ' '.join(("METAR Data for", stn))):
             raise UnexpectedPageError
         # Get rid of the "METAR Data for" line and following blank
         # line
         self.data = self.data[2:]
         # Date part of timestamp for each line of data
         datestamp = '%4i %02i %02i' % (self.year, self.month, self.day)
-        #
+        # Clean up each line
         i = 0
         try:
             while True:
@@ -155,38 +208,8 @@ class METARdata:
                                          self.data[i]))
                 i += 1
         except IndexError:
+            # No more data lines
             pass
-
-
-    def _get_metars(self, stn, kwargs):
-        """Return the METAR data page as a list of strings.
-
-        """
-        # URL parameters and values
-        try:
-            param_map = dict(stn=self.stns[stn], plots='none0',
-                             year=self.year, month=self.month, day=self.day)
-        except:
-            raise UnknownStationError, stn
-        # Process args into parameter map
-        for kw in kwargs:
-            if kw in param_map:
-                param_map[kw] = kwargs[kw]
-            else:
-                raise UnknownParameterError, (kw, kwargs[kw])
-        # Build the parameter string.  Note that order of the
-        # parameters apparently matters to vortex.plymouth.edu, so we
-        # can't use urllib.urlencode()
-        params = '='.join(('ident', param_map['stn']))
-        params += '&' + '='.join(('pl', param_map['plots']))
-        params += '&' + '='.join(('yy', str(param_map['year'])[-2:]))
-        params += '&' + '='.join(('mm', '%02d' % param_map['month']))
-        params += '&' + '='.join(('dd', '%02d' % param_map['day']))
-        # Open the URL, and read it into a list of strings
-        try:
-            return urllib.urlopen("%s?%s" % (self.site, params)).readlines()
-        except:
-            raise
 
 
 def parse_options():
@@ -216,8 +239,10 @@ def parse_options():
     options, args = parser.parse_args()
     # Print help message if there is not exactly 1 command line
     # argument
-    if len(args) != 1 or (options.end and not options.begin):
+    if len(args) != 1:
         parser.print_help()
+        raise SystemExit, 1
+    if options.end and not options.begin:
         raise EndDateWithoutBeginError
     return options, args[0]
 
@@ -250,6 +275,8 @@ def metar_data(station, begin, end):
         date2 = (datetime.today() - timedelta(days=1)).date()
     else:
         date2 = _parse_date(end)
+    if date1 > date2:
+        raise EndDateBeforeBeginError, (begin, end)
     # Retrieve the METAR data for the date range
     metars = []
     while date1 <= date2:
