@@ -74,6 +74,7 @@ import urllib
 
 # Exceptions:
 class METARDataError(Exception): pass
+class WrongNumberOfArguments(METARDataError): pass
 class UnknownParameterError(METARDataError): pass
 class UnknownStationError(METARDataError): pass
 class UnexpectedPageError(METARDataError): pass
@@ -241,7 +242,7 @@ def parse_options():
     # argument
     if len(args) != 1:
         parser.print_help()
-        raise SystemExit, 1
+        raise WrongNumberOfArguments, "\n\nToo few or too many arguments"
     if options.end and not options.begin:
         raise EndDateWithoutBeginError
     return options, args[0]
