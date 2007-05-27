@@ -69,6 +69,7 @@ __docformat__ = 'restructuredtext'
 
 
 from datetime import date, datetime, timedelta
+import sys
 import urllib
 
 
@@ -109,7 +110,7 @@ class METARdata:
         """Mapping of common station names to official station IDs."""
         
 
-    def get_met_data(self, stn, **kwargs):
+    def get_met_data(self, stn, ignore_errors, **kwargs):
         """Return a list of strings of meteorological data for the
         specified station.
 
@@ -137,7 +138,7 @@ class METARdata:
             raise
         # Validate and clean up the METAR data
         try:
-            self._clean_data(stn)
+            self._clean_data(stn, ignore_errors)
         except:
             raise
         return self.data
@@ -162,7 +163,7 @@ class METARdata:
             raise
 
 
-    def _clean_data(self, stn):
+    def _clean_data(self, stn, ignore_errors):
         """Validate and clean up the METAR data.
 
         """
@@ -170,7 +171,11 @@ class METARdata:
         # <title> tag contents
         if not self.data[0].startswith(
             '<TITLE>Generate WXP 24-Hour Meteogram</TITLE>'):
-            raise UnexpectedPageError
+            if ignore_errors:
+                sys.stderr.write('%4i-%02i-%02i data missing\n'
+                                 % (self.year, self.month, self.day))
+            else:
+                raise UnexpectedPageError
         # Get rid of the <title> and <pre> tag lines, and the station
         # location and following blank line
         self.data = self.data[4:]
@@ -178,7 +183,11 @@ class METARdata:
         # checking the "METAR Data for" line contents
         if not self.data[0].startswith(
             ' '.join(("METAR Data for", stn))):
-            raise UnexpectedPageError
+            if ignore_errors:
+                sys.stderr.write('%4i-%02i-%02i data missing\n'
+                                 % (self.year, self.month, self.day))
+            else:
+                raise UnexpectedPageError
         # Get rid of the "METAR Data for" line and following blank
         # line
         self.data = self.data[2:]
@@ -230,6 +239,10 @@ def parse_options():
     help = "ending date for METAR data; default=yesterday"
     parser.add_option('-e', '--end', help=help,
                       dest='end', metavar='yyyy-mm-dd')
+    help = "ignore missing date error, just flag them; default=False"
+    parser.add_option('-i', '--ignore_errors', help=help,
+                      action='store_true', dest='ignore_errors',
+                      default=False)
     help = "run module doctest unit tests"
     parser.add_option('-t', '--test', help=help,
                       action='store_true', dest='doctest', default=False)
@@ -253,7 +266,7 @@ def _test(verbose):
     doctest.testmod(exclude_empty=True, verbose=verbose)
 
 
-def metar_data(station, begin, end):
+def metar_data(station, begin, end, ignore_errors):
     """Return the METAR data for the specified station and date range.
 
     """
@@ -269,7 +282,7 @@ def metar_data(station, begin, end):
     metar = METARdata()
     # Validate the beginning and end dates
     if not begin:
-        return metar.get_met_data(station)
+        return metar.get_met_data(station, ignore_errors)
     else:
         date1 = _parse_date(begin)
     if not end:
@@ -281,8 +294,9 @@ def metar_data(station, begin, end):
     # Retrieve the METAR data for the date range
     metars = []
     while date1 <= date2:
-        metars.extend(metar.get_met_data(station, year=date1.year,
-                                         month=date1.month, day=date1.day))
+        metars.extend(metar.get_met_data(station, ignore_errors,
+                                         year=date1.year, month=date1.month,
+                                         day=date1.day))
         date1 += timedelta(days=1)
     return metars
 
@@ -296,7 +310,8 @@ def main():
         return
     # Retrieve the list of METAR data for the specified station and
     # date range and write it to stdout
-    print ''.join(metar_data(station, options.begin, options.end))
+    print ''.join(metar_data(station, options.begin, options.end,
+                             options.ignore_errors))
 
 
 if __name__ == "__main__":
