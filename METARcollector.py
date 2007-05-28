@@ -174,11 +174,23 @@ class METARdata:
             if ignore_errors:
                 sys.stderr.write('%4i-%02i-%02i data missing\n'
                                  % (self.year, self.month, self.day))
+                return
             else:
                 raise UnexpectedPageError
-        # Get rid of the <title> and <pre> tag lines, and the station
-        # location and following blank line
-        self.data = self.data[4:]
+        # Get rid of the <title> and <pre> tag lines
+        self.data = self.data[2:]
+        # Confirm that data is available for the specified date
+        if self.data[0].startswith('No data were found for date'):
+            if ignore_errors:
+                sys.stderr.write('%4i-%02i-%02i data missing\n'
+                                 % (self.year, self.month, self.day))
+                #Get rid of the error message and following blank line
+                self.data = self.data[2:]
+                return
+            else:
+                raise UnexpectedPageError
+        #Get rid of the station location and following blank line
+        self.data = self.data[2:]
         # Confirm that we got the data for the expected station by
         # checking the "METAR Data for" line contents
         if not self.data[0].startswith(
@@ -186,6 +198,7 @@ class METARdata:
             if ignore_errors:
                 sys.stderr.write('%4i-%02i-%02i data missing\n'
                                  % (self.year, self.month, self.day))
+                return
             else:
                 raise UnexpectedPageError
         # Get rid of the "METAR Data for" line and following blank
