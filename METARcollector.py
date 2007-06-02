@@ -218,6 +218,10 @@ class METARdata:
                                                self.data[i][5:]))
                     # Get rid of continuation text that we just consumed
                     self.data.pop(i)
+                # Get rid of file parse error lines
+                if self.data[i].startswith('SFC_parse_file:'):
+                    self.data.pop(i)
+                    continue
                 # Get rid of SPECI prefix
                 if self.data[i].startswith('SPECI'):
                     self.data[i] = self.data[i][6:]
@@ -324,7 +328,7 @@ def main():
     # Retrieve the list of METAR data for the specified station and
     # date range and write it to stdout
     print ''.join(metar_data(station, options.begin, options.end,
-                             options.ignore_errors))
+                             options.ignore_errors)),
 
 
 if __name__ == "__main__":
