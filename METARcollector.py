@@ -5,23 +5,31 @@ University archive site (vortex.plymouth.edu).
 
 Usage:
 
-- `METARcollector.py [options] station`
+  - ``METARcollector.py [options] station``
+
+To run this script from a ``crontab`` that emails the error messages
+and results, and also logs them to foo, and bar, respectively, do some
+fancy footwork with file descriptor reassignment, pipes, and tee,
+resulting in a command like this (only work in [ba|k]sh shells, not
+[t]csh::
+
+  (./METARcollector.py -i yvr | tee -a foo) 3>&1 1>&2 2>&3 | tee -a bar
 
 Public Classes and Functions:
 
-- `METARdata`: Retrieve and process METAR weather data from the
-  Plymouth State University archive site (vortex.plymouth.edu).
-- `get_met_data()`: Return a list of string of meteorological data for
-  the specified station.
+  - ``METARdata``: Retrieve and process METAR weather data from the
+    Plymouth State University archive site (vortex.plymouth.edu).
+  - ``get_met_data()``: Return a list of string of meteorological data for
+    the specified station.
 
 Exception Classes:
 
-- `METARDataError'
-- `UnknownParameterError`
-- `UnknownStationError`
-- `UnexpectedPageError`
-- `InvalidDateError`
-- `EndDateWithoutBeginError`
+  - ``METARDataError``
+  - ``UnknownParameterError``
+  - ``UnknownStationError``
+  - ``UnexpectedPageError``
+  - ``InvalidDateError``
+  - ``EndDateWithoutBeginError``
 
 
 Unit Tests
@@ -110,9 +118,9 @@ class METARdata:
         """Mapping of common station names to official station IDs."""
         
 
-    def get_met_data(self, stn, ignore_errors, **kwargs):
-        """Return a list of strings of meteorological data for the
-        specified station.
+    def get_met_data(self, stn, ignore_errors, retries, **kwargs):
+        """Return a list of strings of METAR meteorological data for
+        the specified station on sthe specified date.
 
         Each list element is a string of the form:
           'yyyy mm dd hh METAR'
@@ -133,7 +141,7 @@ class METARdata:
                 raise UnknownParameterError, (kw, kwargs[kw])
         # Get the list of METARs
         try:
-            self.data = self._get_metars(stn)
+            self.data = self._get_metars(stn, retries)
         except:
             raise
         # Validate and clean up the METAR data
@@ -144,7 +152,7 @@ class METARdata:
         return self.data
 
 
-    def _get_metars(self, stn):
+    def _get_metars(self, stn, retries):
         """Return the METAR data page as a list of strings.
 
         """
@@ -157,23 +165,43 @@ class METARdata:
         params += '&' + '='.join(('mm', '%02d' % self.month))
         params += '&' + '='.join(('dd', '%02d' % self.day))
         # Open the URL, and read it into a list of strings
-        try:
-            return urllib.urlopen("%s?%s" % (self.site, params)).readlines()
-        except:
-            raise
+        attempt = 0
+        while attempt <= retries:
+            try:
+                page =  urllib.urlopen("%s?%s" %
+                                       (self.site, params)).readlines()
+            except:
+                raise
+            # If missing data are detected, try reading from the URL
+            # again because sometimes the SFC_parse_file errors are
+            # resolved on subsequent attempts
+            if not [line for line in page
+                    if line.startswith("SFC_parse_file:")]:
+                return page
+            else:
+                attempt += 1
+        else:
+            # Return the data we got with a warning that some are
+            # missing
+            sys.stderr.write('server timeout: some data are missing '
+                             'for %4i-%02i-%02i\n'
+                             % (self.year, self.month, self.day))
+            return page
 
 
     def _clean_data(self, stn, ignore_errors):
         """Validate and clean up the METAR data.
 
         """
-        # Confirm that we got the expected web page by checking the
-        # <title> tag contents
-        if not self.data[0].startswith(
-            '<TITLE>Generate WXP 24-Hour Meteogram</TITLE>'):
+        # Confirm that we got some data, and confirm that it's the
+        # expected web page by checking the <title> tag contents
+        if (not self.data) | (not self.data[0].startswith(
+            '<TITLE>Generate WXP 24-Hour Meteogram</TITLE>')):
             if ignore_errors:
-                sys.stderr.write('%4i-%02i-%02i data missing\n'
+                sys.stderr.write('Invalid data returned for '
+                                 '%4i-%02i-%02i\n'
                                  % (self.year, self.month, self.day))
+                self.data = ''
                 return
             else:
                 raise UnexpectedPageError
@@ -184,8 +212,7 @@ class METARdata:
             if ignore_errors:
                 sys.stderr.write('%4i-%02i-%02i data missing\n'
                                  % (self.year, self.month, self.day))
-                #Get rid of the error message and following blank line
-                self.data = self.data[2:]
+                self.data = ''
                 return
             else:
                 raise UnexpectedPageError
@@ -196,8 +223,10 @@ class METARdata:
         if not self.data[0].startswith(
             ' '.join(("METAR Data for", stn))):
             if ignore_errors:
-                sys.stderr.write('%4i-%02i-%02i data missing\n'
+                sys.stderr.write('%4i-%02i-%02i data missing '
+                                 'or incorrect station returned\n'
                                  % (self.year, self.month, self.day))
+                self.data = ''
                 return
             else:
                 raise UnexpectedPageError
@@ -233,6 +262,10 @@ class METARdata:
                 # Add hour to timestamp, and prepend timestamp to line
                 self.data[i] = ' '.join((datestamp, fields[2][2:4],
                                          self.data[i]))
+                # Get rid of duplicate data lines
+                if self.data[i] == self.data[i-1]:
+                    self.data.pop(i)
+                    continue
                 i += 1
         except IndexError:
             # No more data lines
@@ -246,8 +279,8 @@ def parse_options():
 
     # Build the option parser
     from optparse import OptionParser
-    desc = ' '.join(("Retrieve the METAR data for the specified station",
-                     "and date range and write it to stdout."))
+    desc = ("Retrieve the METAR data for the specified station "
+            "and date range and write it to stdout.")
     parser = OptionParser(description=desc)
     parser.usage += ' station'
     help = "beginning date for METAR data; default=yesterday"
@@ -260,6 +293,10 @@ def parse_options():
     parser.add_option('-i', '--ignore_errors', help=help,
                       action='store_true', dest='ignore_errors',
                       default=False)
+    help = "number of retries if METAR server times out; default=5"
+    parser.add_option('-r', '--retries', help=help,
+                      action='store', type='int', dest='retries',
+                      default=5)
     help = "run module doctest unit tests"
     parser.add_option('-t', '--test', help=help,
                       action='store_true', dest='doctest', default=False)
@@ -283,7 +320,7 @@ def _test(verbose):
     doctest.testmod(exclude_empty=True, verbose=verbose)
 
 
-def metar_data(station, begin, end, ignore_errors):
+def metar_data(station, begin, end, ignore_errors, retries):
     """Return the METAR data for the specified station and date range.
 
     """
@@ -299,7 +336,7 @@ def metar_data(station, begin, end, ignore_errors):
     metar = METARdata()
     # Validate the beginning and end dates
     if not begin:
-        return metar.get_met_data(station, ignore_errors)
+        return metar.get_met_data(station, ignore_errors, retries)
     else:
         date1 = _parse_date(begin)
     if not end:
@@ -311,7 +348,7 @@ def metar_data(station, begin, end, ignore_errors):
     # Retrieve the METAR data for the date range
     metars = []
     while date1 <= date2:
-        metars.extend(metar.get_met_data(station, ignore_errors,
+        metars.extend(metar.get_met_data(station, ignore_errors, retries,
                                          year=date1.year, month=date1.month,
                                          day=date1.day))
         date1 += timedelta(days=1)
@@ -328,7 +365,7 @@ def main():
     # Retrieve the list of METAR data for the specified station and
     # date range and write it to stdout
     print ''.join(metar_data(station, options.begin, options.end,
-                             options.ignore_errors)),
+                             options.ignore_errors, options.retries)),
 
 
 if __name__ == "__main__":
