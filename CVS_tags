@@ -12,4 +12,9 @@ EPOC_2006 - immediately before code was branched to do the runs for
             the paper presented at the EPOC 2006 conference
             (TImberline Lodge, Mt. Hood, OR)
 
+fall_2007 - project has been stable for several months
+	  - immediately before change to larger met and wind data
+            files, and new interpolation scheme for ctd and profile
+            data
+
 # end of file
