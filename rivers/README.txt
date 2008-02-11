@@ -23,5 +23,19 @@ g95.  The commands to do the reformatting are:
       ../formatDataFile "%i %i %i %e %e" < eng200123456.dat > spam
       mv spam eng2001223456.dat
 
+MEGAN'S HISTORIC DATA FEB 2008
+
+Fraser_historic.dat is just Fraser_flowDaily.dat with the disclaimer information and the flags removed 
+
+Englishman_historic.dat is the Englishman_flowDaily.dat with disclaimer info and flags removed plus data for
+2005 from the Enviroment Canada website.
+**Missing data from 1971-1979.  Need river data for 70's because thats when I 
+have CTD profiles from.  Will use Nanimo river data to run those particular 
+historic timeseries.
+
+
+
+
+
 # end of file
 
