@@ -41,3 +41,22 @@ the test data produces.
 
 yvrTeststdout.txt is the stdout that the test data produces.
 
+
+	     Doug's Notes on Reformatting Met Data Files
+			     10-May-2009
+
+The YVRhist* files that contain cloud fraction, air temperature, and
+relative humidity data must be reformatted so that SOG compiled with
+g95 can read them.  Those fileswere reformatted to make date fields
+into integers, and to use appropriate precision for other fields using
+commands like the following:
+
+$ cd sog-forcing/met
+$ mv YVRhistHum YVRhistHum.raw
+$ ../formatDataFile.py "%i %i %i %i %i %.1f %.1f %.1f %.1f %.1f %.1f \
+   %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f \
+   %.1f %.1f %.1f %.1f" < YVRhistHum.raw > YVRhistHum
+
+After reformatting the .raw files were commited to CVS as new files,
+and the YVRhist* files were committed with messages describing how
+they were produced from the .raw files.
