@@ -32,6 +32,11 @@ ranges from May 1,1967 to Sep 1, 2001 plus the SHcompRot.dat which includes
 data from 2001 to April 2006.  The SH_historic.dat is the data from SH.dat but
 formatted to be like SHcompRot.dat.  SH_historic.dat was shifted by 8 hrs, so I
 shifted it back to fit the SHcompRotFmt.dat time.
+		   
+		  
+		  Megan's Aug - 2009 notes
+
+The rI_Winds.txt file contains wind data for Rivers Inlet. This data was derived using a formala in pH_windFormula.f90.  Using wind data from Port Hardy, we determined a formula to calculate whether the wind would be going up or down channeel in rivers Inlet.  DF02 is located in a part of Rivers inlet that runs due north/south and the larger winds tend to be channeled either up or down channel.  Running matlab code windComparison_laska.m shows wind direction/speed comparisonsof port hardy and laska (Mike's Weather station). 
 
 # end of file
 
