@@ -35,6 +35,9 @@ historic timeseries.
 
 
 
+MEGAN'S RI data Aug 2009
+
+Wannock_historic.txt is the river data from Wannock River from 1966/01/01 to 2009/01/31. Data received from Environment Canada - River Discharge Data station 08FA007.
 
 
 # end of file
