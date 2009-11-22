@@ -36,7 +36,24 @@ shifted it back to fit the SHcompRotFmt.dat time.
 		  
 		  Megan's Aug - 2009 notes
 
-The rI_Winds.txt file contains wind data for Rivers Inlet. This data was derived using a formala in pH_windFormula.f90.  Using wind data from Port Hardy, we determined a formula to calculate whether the wind would be going up or down channeel in rivers Inlet.  DF02 is located in a part of Rivers inlet that runs due north/south and the larger winds tend to be channeled either up or down channel.  Running matlab code windComparison_laska.m shows wind direction/speed comparisonsof port hardy and laska (Mike's Weather station). 
+The rI_Winds.txt file  contains wind data for Rivers  Inlet. This data
+was derived  using a formala  in pH_windFormula.f90.  Using  wind data
+from Port Hardy, we determined a formula to calculate whether the wind
+would be going  up or down channeel in rivers  Inlet.  DF02 is located
+in a  part of Rivers  inlet that runs  due north/south and  the larger
+winds tend to be channeled  either up or down channel.  Running matlab
+code  windComparison_laska.m shows wind  direction/speed comparisonsof
+port hardy and laska (Mike's Weather station).
+
+
+			Doug's 21-Nov-09 Notes
+
+The rI_Winds.txt file was process with the
+sog-forcing/formatDataFile.py script to reformat its data correctly as
+integers and e-notation reals.  The commands used were:
+
+$ ../formatDataFile.py "%i %i %i %e %e %e" <rI_Winds.txt >rI_Winds.txt.fmt
+$ mv rI_Winds.txt.fmt rI_Winds.txt
 
 # end of file
 
