@@ -20,8 +20,9 @@ Formatting in eng200123456.dat file was adjusted to make year, month,
 and day fields integers, so that it can be read by SOG compiled with
 g95.  The commands to do the reformatting are:
 
-      ../formatDataFile "%i %i %i %e %e" < eng200123456.dat > spam
+      ../formatDataFile.py "%i %i %i %e %e" < eng200123456.dat > spam
       mv spam eng2001223456.dat
+
 
 MEGAN'S HISTORIC DATA FEB 2008
 
@@ -34,11 +35,22 @@ have CTD profiles from.  Will use Nanimo river data to run those particular
 historic timeseries.
 
 
-
 MEGAN'S RI data Aug 2009
 
-Wannock_historic.txt is the river data from Wannock River from 1966/01/01 to 2009/01/31. Data received from Environment Canada - River Discharge Data station 08FA007.
+Wannock_historic.txt is the river data from Wannock River from
+1966/01/01 to 2009/01/31. Data received from Environment Canada -
+River Discharge Data station 08FA007.
 
+
+	   Doug's Notes on Reformatting Wannock River Data
+			     21-Nov-2009
+
+Formatting in Wannock_historic.txt file was adjusted to make year, month,
+and day fields integers, so that it can be read by SOG compiled with
+g95.  The commands to do the reformatting are:
+
+    $ ../formatDataFile.py "%i %i %i %e" < Wannock_historic.txt > spam
+    $ mv spam Wannock_historic.txt
 
 # end of file
 
