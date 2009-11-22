@@ -47,7 +47,7 @@ yvrTeststdout.txt is the stdout that the test data produces.
 
 The YVRhist* files that contain cloud fraction, air temperature, and
 relative humidity data must be reformatted so that SOG compiled with
-g95 can read them.  Those fileswere reformatted to make date fields
+g95 can read them.  Those files were reformatted to make date fields
 into integers, and to use appropriate precision for other fields using
 commands like the following:
 
@@ -57,6 +57,30 @@ $ ../formatDataFile.py "%i %i %i %i %i %.1f %.1f %.1f %.1f %.1f %.1f \
    %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f \
    %.1f %.1f %.1f %.1f" < YVRhistHum.raw > YVRhistHum
 
+Remove the \ line continuations from the last command above.
+
 After reformatting the .raw files were commited to CVS as new files,
 and the YVRhist* files were committed with messages describing how
+they were produced from the .raw files.
+
+
+	     Doug's Notes on Reformatting Rivers Inet Met Data Files
+			     21-Nov-2009
+
+The RIhist* files that contain cloud fraction, air temperature, and
+relative humidity data must be reformatted so that SOG compiled with
+g95 can read them.  Those files were reformatted to make date fields
+into integers, and to use appropriate precision for other fields using
+commands like the following:
+
+$ cd sog-forcing/met
+$ mv RIhistHum RIhistHum.raw
+$ ../formatDataFile.py "%i %i %i %i %i %.1f %.1f %.1f %.1f %.1f %.1f \
+   %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f %.1f \
+   %.1f %.1f %.1f %.1f" < RIhistHum.raw > RIhistHum
+
+Remove the \ line continuations from the last command above.
+
+After reformatting the .raw files were commited to CVS as new files,
+and the RIhist* files were committed with messages describing how
 they were produced from the .raw files.
