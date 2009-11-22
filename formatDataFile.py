@@ -55,7 +55,7 @@ else:
         except EOFError:
             break
         else:
-            # Split the line of data at spaces, ignoring peices that end up
+            # Split the line of data at spaces, ignoring pieces that end up
             # empty, and strip the whitespace off the pieces we keep
             line = [num.strip() for num in line.split(' ') if num]
 
@@ -63,6 +63,7 @@ else:
             # have the same number of fields
             if len(line) != len(fmt):
                 sys.stderr.write("Number of fields not matched...\n")
+                sys.stderr.write(str(line) + "\n")
                 break
             else:
                 # Write the reformatted data to stdout
