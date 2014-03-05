@@ -17,6 +17,7 @@ of SOG-forcing data files.
 """
 import logging
 
+import arrow
 import cliff.command
 
 
@@ -56,3 +57,20 @@ class SplitYears(cliff.command.Command):
     def take_action(self, parsed_args):
         if parsed_args.end_year is None:
             parsed_args.end_year = parsed_args.start_year + 1
+        for year in range(parsed_args.start_year, parsed_args.end_year):
+            if parsed_args.chunk_suffix is not None:
+                chunk_suffix = parsed_args.chunk_suffix
+            else:
+                chunk_suffix = (
+                    '_{first_year}{second_year}'
+                    .format(
+                        first_year=str(year)[-2:],
+                        second_year=str(year + 1)[-2:]))
+            chunk_file = ''.join((parsed_args.file, chunk_suffix))
+            with open(parsed_args.file, 'rt') as data:
+                with open(chunk_file, 'wt') as output:
+                    for line in self._interesting(data, year):
+                        output.write(line)
+
+    def _interesting(self, data, first_year):
+        yield

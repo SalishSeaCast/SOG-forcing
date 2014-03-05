@@ -34,19 +34,58 @@ def test_get_parser(split_years):
     assert parser.prog == 'tools 2yr_subset'
 
 
-def test_take_action_end_year_none(split_years):
+@pytest.mark.parametrize(
+    'start_yr, end_yr, expected',
+    [
+        (1992, None, 1993),
+        (1992, 1995, 1995),
+    ]
+)
+def test_take_action_end_year(start_yr, end_yr, expected, split_years):
     parsed_args = mock.Mock(
+        file='foo',
+        start_year=start_yr,
+        end_year=end_yr,
+        chunk_suffix=None,
+    )
+    m_open = mock.mock_open()
+    with mock.patch('tools.split_years.open', m_open(), create=True):
+        split_years.take_action(parsed_args)
+    assert parsed_args.end_year == expected
+
+
+@pytest.mark.parametrize(
+    'start_yr, end_yr, chunk_suffix, expected',
+    [
+        (1992, None, None, ['_9293']),
+        (1992, 1995, None, ['_9293', '_9394', '_9495']),
+        (1992, None, '_foo', ['_foo']),
+    ]
+)
+def test_take_action_chunk_suffix(
+    start_yr, end_yr, chunk_suffix, expected, split_years,
+):
+    parsed_args = mock.Mock(
+        file='foo',
+        start_year=start_yr,
+        end_year=end_yr,
+        chunk_suffix=chunk_suffix,
+    )
+    m_open = mock.mock_open()
+    with mock.patch('tools.split_years.open', m_open, create=True):
+        split_years.take_action(parsed_args)
+    expected_calls = [mock.call('foo' + e, 'wt') for e in expected]
+    assert m_open.call_args_list[1::2] == expected_calls
+
+
+def test_take_action_read_from_forcing_file(split_years):
+    parsed_args = mock.Mock(
+        file='foo',
         start_year=1992,
         end_year=None,
+        chunk_suffix=None,
     )
-    split_years.take_action(parsed_args)
-    assert parsed_args.end_year == 1993
-
-
-def test_take_action_end_year_set(split_years):
-    parsed_args = mock.Mock(
-        start_year=1992,
-        end_year=1995,
-    )
-    split_years.take_action(parsed_args)
-    assert parsed_args.end_year == 1995
+    m_open = mock.mock_open()
+    with mock.patch('tools.split_years.open', m_open, create=True):
+        split_years.take_action(parsed_args)
+    assert m_open.call_args_list[0] == [('foo', 'rt')]
