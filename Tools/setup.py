@@ -68,7 +68,8 @@ setup(
             'tools = tools.main:main',
         ],
         # Sub-command plug-ins:
-        'SOG-forcing.tools.app': [
+        'SOG_forcing.tools.app': [
+            '2yr_subset = tools.split_years:SplitYears',
         ],
     },
 )

@@ -32,11 +32,13 @@ __all__ = [
 
 class SOGForcingToolsApp(cliff.app.App):
     def __init__(self):
-        app_namespace = 'SOG-forcing.tools.app'
+        app_namespace = 'SOG_forcing.tools.app'
         super(SOGForcingToolsApp, self).__init__(
             description=__pkg_metadata__.DESCRIPTION,
             version=__pkg_metadata__.VERSION,
-            command_manager=cliff.commandmanager.CommandManager(app_namespace),
+            command_manager=cliff.commandmanager.CommandManager(
+                app_namespace,
+                convert_underscores=False),
         )
 
 
