@@ -24,14 +24,33 @@ __all__ = ['SplitYears']
 
 
 class SplitYears(cliff.command.Command):
-    """
-
-    SOG-forcing_tools command plug-in.
+    """Generate 2 yr long chunks from forcing data file.
     """
     log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
         parser = super(SplitYears, self).get_parser(prog_name)
+        parser.add_argument(
+            'file',
+            help='forcing data file to create 2-yr chunks from',
+        )
+        parser.add_argument(
+            'start_year',
+            type=int,
+            help='starting year for first chunk',
+        )
+        parser.add_argument(
+            '-e', '--end-date',
+            type=int,
+            help='ending year for last chunk; defaults to start_year + 1',
+        )
+        parser.add_argument(
+            '--chunk-suffix',
+            help="suffix for chunk file names; "
+                 "defaults to _XXYY, where XX is the chunk's starting year, "
+                 "and YY is the chunk's ending year; "
+                 "e.g. _9293 for the 1992-1993 chunk",
+        )
         return parser
 
     def take_action(self, parsed_args):
