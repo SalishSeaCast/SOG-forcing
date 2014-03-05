@@ -32,3 +32,21 @@ def split_years():
 def test_get_parser(split_years):
     parser = split_years.get_parser('tools 2yr_subset')
     assert parser.prog == 'tools 2yr_subset'
+
+
+def test_take_action_end_year_none(split_years):
+    parsed_args = mock.Mock(
+        start_year=1992,
+        end_year=None,
+    )
+    split_years.take_action(parsed_args)
+    assert parsed_args.end_year == 1993
+
+
+def test_take_action_end_year_set(split_years):
+    parsed_args = mock.Mock(
+        start_year=1992,
+        end_year=1995,
+    )
+    split_years.take_action(parsed_args)
+    assert parsed_args.end_year == 1995

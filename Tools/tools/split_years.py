@@ -40,7 +40,7 @@ class SplitYears(cliff.command.Command):
             help='starting year for first chunk',
         )
         parser.add_argument(
-            '-e', '--end-date',
+            '-e', '--end-year',
             type=int,
             help='ending year for last chunk; defaults to start_year + 1',
         )
@@ -54,4 +54,5 @@ class SplitYears(cliff.command.Command):
         return parser
 
     def take_action(self, parsed_args):
-        pass
+        if parsed_args.end_year is None:
+            parsed_args.end_year = parsed_args.start_year + 1
