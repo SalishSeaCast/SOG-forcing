@@ -62,30 +62,44 @@ class SplitYears(cliff.command.Command):
     def take_action(self, parsed_args):
         if parsed_args.end_year is None:
             parsed_args.end_year = parsed_args.start_year + 1
+        if parsed_args.chunk_suffix is not None:
+            chunk_suffix = parsed_args.chunk_suffix
+        date_readers = {
+            'meteo': self._meteo_read_date,
+            'wind': self._wind_read_date,
+        }
+        read_date = date_readers[parsed_args.data_type]
         for year in range(parsed_args.start_year, parsed_args.end_year):
-            if parsed_args.chunk_suffix is not None:
-                chunk_suffix = parsed_args.chunk_suffix
-            else:
+            first_day = arrow.get(year, 1, 1)
+            last_day = arrow.get(year + 2, 1, 1)
+            chunk_lines = []
+            with open(parsed_args.file, 'rt') as data:
+                interesting_lines = self._interesting(
+                    data, first_day, last_day, read_date
+                )
+                for line in interesting_lines:
+                    chunk_lines.append(line)
+            try:
+                data_date = read_date(chunk_lines[0])
+            except IndexError:
+                self.log.warning(
+                    'No {first_year}/{last_year} data'
+                    .format(
+                        first_year=first_day.year,
+                        last_year=last_day.year - 1))
+                continue
+            if parsed_args.chunk_suffix is None:
                 chunk_suffix = (
                     '_{first_year}{second_year}'
                     .format(
                         first_year=str(year)[-2:],
                         second_year=str(year + 1)[-2:]))
             chunk_file = ''.join((parsed_args.file, chunk_suffix))
-            with open(parsed_args.file, 'rt') as data:
-                with open(chunk_file, 'wt') as output:
-                    for line in self._interesting(
-                            data, parsed_args.data_type, year):
-                        output.write(line)
+            with open(chunk_file, 'wt') as output:
+                    output.writelines(chunk_lines)
+            self.log.info('Wrote {chunk_file}'.format(chunk_file=chunk_file))
 
-    def _interesting(self, data, data_type, first_year):
-        first_day = arrow.get(first_year, 1, 1)
-        last_day = arrow.get(first_year + 2, 1, 1)
-        date_readers = {
-            'meteo': self._meteo_read_date,
-            'wind': self._wind_read_date,
-        }
-        read_date = date_readers[data_type]
+    def _interesting(self, data, first_day, last_day, read_date):
         for line in data:
             data_date = read_date(line)
             if data_date >= first_day and data_date <= last_day:

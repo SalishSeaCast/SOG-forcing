@@ -74,11 +74,17 @@ def test_take_action_chunk_suffix(
         end_year=end_yr,
         chunk_suffix=chunk_suffix,
     )
+    split_years._interesting = mock.Mock(
+        return_value=['1108447 1992 1 1 foo\n']
+    )
+    split_years.log = mock.Mock()
     m_open = mock.mock_open()
     with mock.patch('tools.split_years.open', m_open, create=True):
         split_years.take_action(parsed_args)
     expected_calls = [mock.call('foo' + e, 'wt') for e in expected]
     assert m_open.call_args_list[1::2] == expected_calls
+    expected_calls = [mock.call('Wrote foo' + e) for e in expected]
+    split_years.log.info.call_args_list == expected_calls
 
 
 def test_take_action_read_from_forcing_file(split_years):
@@ -95,6 +101,22 @@ def test_take_action_read_from_forcing_file(split_years):
     assert m_open.call_args_list[0] == [('foo', 'rt')]
 
 
+def test_take_action_no_empty_output(split_years):
+    parsed_args = mock.Mock(
+        file='foo',
+        data_type='meteo',
+        start_year=1992,
+        end_year=None,
+        chunk_suffix=None,
+    )
+    split_years.log = mock.Mock()
+    m_open = mock.mock_open()
+    with mock.patch('tools.split_years.open', m_open, create=True):
+        split_years.take_action(parsed_args)
+    m_open.assert_called_once_with('foo', 'rt')
+    split_years.log.warning.assert_called_once_with('No 1992/1993 data')
+
+
 @pytest.mark.parametrize(
     'data',
     [
@@ -104,7 +126,10 @@ def test_take_action_read_from_forcing_file(split_years):
     ]
 )
 def test_interesting_yield(data, split_years):
-    line = next(split_years._interesting(data, 'meteo', 1992))
+    first_day = arrow.get(1992, 1, 1)
+    last_day = arrow.get(1994, 1, 1)
+    read_date = split_years._meteo_read_date
+    line = next(split_years._interesting(data, first_day, last_day, read_date))
     assert line == data[0]
 
 
@@ -116,8 +141,11 @@ def test_interesting_yield(data, split_years):
     ]
 )
 def test_interesting_stop_iteration(data, split_years):
+    first_day = arrow.get(1992, 1, 1)
+    last_day = arrow.get(1994, 1, 1)
+    read_date = split_years._meteo_read_date
     with pytest.raises(StopIteration):
-        next(split_years._interesting(data, 'meteo', 1992))
+        next(split_years._interesting(data, first_day, last_day, read_date))
 
 
 def test_meteo_read_date(split_years):
