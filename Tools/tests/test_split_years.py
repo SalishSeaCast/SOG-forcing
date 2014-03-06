@@ -59,7 +59,7 @@ def test_take_action_end_year(start_yr, end_yr, expected, split_years):
     [
         (1992, None, None, ['_9293']),
         (1992, 1995, None, ['_9293', '_9394', '_9495']),
-        (1992, None, '_foo', ['_foo']),
+        (1992, None, '_bar', ['_bar']),
     ]
 )
 def test_take_action_chunk_suffix(
@@ -89,3 +89,28 @@ def test_take_action_read_from_forcing_file(split_years):
     with mock.patch('tools.split_years.open', m_open, create=True):
         split_years.take_action(parsed_args)
     assert m_open.call_args_list[0] == [('foo', 'rt')]
+
+
+@pytest.mark.parametrize(
+    'data',
+    [
+        ['1108447 1992 1 1 foo\n'],  # first day
+        ['1108447 1992 3 5 foo\n'],  # day in range
+        ['1108447 1994 1 1 foo\n'],  # last day
+    ]
+)
+def test_interesting_yield(data, split_years):
+    line = next(split_years._interesting(data, 1992))
+    assert line == data[0]
+
+
+@pytest.mark.parametrize(
+    'data',
+    [
+        ['1108447 1991 1 1 foo\n'],  # all data before start year
+        ['1108447 1994 1 2 foo\n'],  # day after last day to output
+    ]
+)
+def test_interesting_stop_iteration(data, split_years):
+    with pytest.raises(StopIteration):
+        next(split_years._interesting(data, 1992))

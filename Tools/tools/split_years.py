@@ -73,4 +73,12 @@ class SplitYears(cliff.command.Command):
                         output.write(line)
 
     def _interesting(self, data, first_year):
-        yield
+        first_day = arrow.get(first_year, 1, 1)
+        last_day = arrow.get(first_year + 2, 1, 1)
+        for line in data:
+            stn, year, month, day, remainder = line.split(maxsplit=4)
+            data_date = arrow.get(*map(int, (year, month, day)))
+            if data_date >= first_day and data_date <= last_day:
+                yield line
+            if data_date > last_day:
+                raise StopIteration
