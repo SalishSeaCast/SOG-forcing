@@ -83,6 +83,7 @@ class SplitYears(cliff.command.Command):
         last_day = arrow.get(first_year + 2, 1, 1)
         date_readers = {
             'meteo': self._meteo_read_date,
+            'wind': self._wind_read_date,
         }
         read_date = date_readers[data_type]
         for line in data:
@@ -94,5 +95,10 @@ class SplitYears(cliff.command.Command):
 
     def _meteo_read_date(self, line):
         stn, year, month, day, remainder = line.split(maxsplit=4)
+        data_date = arrow.get(*map(int, (year, month, day)))
+        return data_date
+
+    def _wind_read_date(self, line):
+        day, month, year, remainder = line.split(maxsplit=3)
         data_date = arrow.get(*map(int, (year, month, day)))
         return data_date

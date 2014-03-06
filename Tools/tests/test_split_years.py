@@ -124,3 +124,9 @@ def test_meteo_read_date(split_years):
     line = '1108447 1991 1 1 foo\n'
     data_date = split_years._meteo_read_date(line)
     assert data_date == arrow.get(1991, 1, 1)
+
+
+def test_wind_read_date(split_years):
+    line = '08 02 2014 16.0 -0.435779 -4.980973\n'
+    data_date = split_years._wind_read_date(line)
+    assert data_date == arrow.get(2014, 2, 8)
