@@ -19,6 +19,7 @@ try:
 except ImportError:  # pragma: no cover; happens for Python < 3.3
     import mock
 
+import arrow
 import cliff.app
 import pytest
 
@@ -114,3 +115,9 @@ def test_interesting_yield(data, split_years):
 def test_interesting_stop_iteration(data, split_years):
     with pytest.raises(StopIteration):
         next(split_years._interesting(data, 1992))
+
+
+def test_meteo_read_date(split_years):
+    line = '1108447 1991 1 1 foo\n'
+    data_date = split_years._meteo_read_date(line)
+    assert data_date == arrow.get(1991, 1, 1)
