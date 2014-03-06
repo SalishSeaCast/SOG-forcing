@@ -45,6 +45,7 @@ def test_get_parser(split_years):
 def test_take_action_end_year(start_yr, end_yr, expected, split_years):
     parsed_args = mock.Mock(
         file='foo',
+        data_type='meteo',
         start_year=start_yr,
         end_year=end_yr,
         chunk_suffix=None,
@@ -68,6 +69,7 @@ def test_take_action_chunk_suffix(
 ):
     parsed_args = mock.Mock(
         file='foo',
+        data_type='meteo',
         start_year=start_yr,
         end_year=end_yr,
         chunk_suffix=chunk_suffix,
@@ -82,6 +84,7 @@ def test_take_action_chunk_suffix(
 def test_take_action_read_from_forcing_file(split_years):
     parsed_args = mock.Mock(
         file='foo',
+        data_type='meteo',
         start_year=1992,
         end_year=None,
         chunk_suffix=None,
@@ -101,7 +104,7 @@ def test_take_action_read_from_forcing_file(split_years):
     ]
 )
 def test_interesting_yield(data, split_years):
-    line = next(split_years._interesting(data, 1992))
+    line = next(split_years._interesting(data, 'meteo', 1992))
     assert line == data[0]
 
 
@@ -114,7 +117,7 @@ def test_interesting_yield(data, split_years):
 )
 def test_interesting_stop_iteration(data, split_years):
     with pytest.raises(StopIteration):
-        next(split_years._interesting(data, 1992))
+        next(split_years._interesting(data, 'meteo', 1992))
 
 
 def test_meteo_read_date(split_years):

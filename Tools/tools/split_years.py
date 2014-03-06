@@ -36,6 +36,11 @@ class SplitYears(cliff.command.Command):
             help='forcing data file to create 2-yr chunks from',
         )
         parser.add_argument(
+            'data_type',
+            choices=('meteo', 'wind', 'river'),
+            help='type of forcing data file',
+        )
+        parser.add_argument(
             'start_year',
             type=int,
             help='starting year for first chunk',
@@ -69,13 +74,17 @@ class SplitYears(cliff.command.Command):
             chunk_file = ''.join((parsed_args.file, chunk_suffix))
             with open(parsed_args.file, 'rt') as data:
                 with open(chunk_file, 'wt') as output:
-                    for line in self._interesting(data, year):
+                    for line in self._interesting(
+                            data, parsed_args.data_type, year):
                         output.write(line)
 
-    def _interesting(self, data, first_year):
+    def _interesting(self, data, data_type, first_year):
         first_day = arrow.get(first_year, 1, 1)
         last_day = arrow.get(first_year + 2, 1, 1)
-        read_date = self._meteo_read_date
+        date_readers = {
+            'meteo': self._meteo_read_date,
+        }
+        read_date = date_readers[data_type]
         for line in data:
             data_date = read_date(line)
             if data_date >= first_day and data_date <= last_day:
