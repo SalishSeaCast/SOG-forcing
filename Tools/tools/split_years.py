@@ -116,11 +116,11 @@ class SplitYears(cliff.command.Command):
                 raise StopIteration
 
     def _meteo_read_date(self, line):
-        stn, year, month, day, remainder = line.split(maxsplit=4)
+        stn, year, month, day, remainder = line.split(None, 4)
         data_date = arrow.get(*map(int, (year, month, day)))
         return data_date
 
     def _wind_read_date(self, line):
-        day, month, year, remainder = line.split(maxsplit=3)
+        day, month, year, remainder = line.split(None, 3)
         data_date = arrow.get(*map(int, (year, month, day)))
         return data_date
