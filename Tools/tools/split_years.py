@@ -80,10 +80,18 @@ class SplitYears(cliff.command.Command):
                 for line in interesting_lines:
                     chunk_lines.append(line)
             try:
-                data_date = read_date(chunk_lines[0])
+                first_data_date = read_date(chunk_lines[0])
+                last_data_date = read_date(chunk_lines[-1])
             except IndexError:
                 self.log.warning(
                     'No {first_year}/{last_year} data'
+                    .format(
+                        first_year=first_day.year,
+                        last_year=last_day.year - 1))
+                continue
+            if first_data_date != first_day or last_data_date != last_day:
+                self.log.warning(
+                    '{first_year}/{last_year} data is incomplete - no output'
                     .format(
                         first_year=first_day.year,
                         last_year=last_day.year - 1))

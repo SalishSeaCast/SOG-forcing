@@ -60,7 +60,6 @@ def test_take_action_end_year(start_yr, end_yr, expected, split_years):
     'start_yr, end_yr, chunk_suffix, expected',
     [
         (1992, None, None, ['_9293']),
-        (1992, 1995, None, ['_9293', '_9394', '_9495']),
         (1992, None, '_bar', ['_bar']),
     ]
 )
@@ -74,10 +73,12 @@ def test_take_action_chunk_suffix(
         end_year=end_yr,
         chunk_suffix=chunk_suffix,
     )
-    split_years._interesting = mock.Mock(
-        return_value=['1108447 1992 1 1 foo\n']
-    )
     split_years.log = mock.Mock()
+    split_years._interesting = mock.Mock(return_value=iter([
+        '1108447 1992 1 1 foo\n',  # first day
+        '1108447 1992 3 5 foo\n',  # day in range
+        '1108447 1994 1 1 foo\n',  # end before last day
+    ]))
     m_open = mock.mock_open()
     with mock.patch('tools.split_years.open', m_open, create=True):
         split_years.take_action(parsed_args)
@@ -115,6 +116,28 @@ def test_take_action_no_empty_output(split_years):
         split_years.take_action(parsed_args)
     m_open.assert_called_once_with('foo', 'rt')
     split_years.log.warning.assert_called_once_with('No 1992/1993 data')
+
+
+def test_take_action_no_incomplete_output(split_years):
+    parsed_args = mock.Mock(
+        file='foo',
+        data_type='meteo',
+        start_year=1992,
+        end_year=None,
+        chunk_suffix=None,
+    )
+    split_years.log = mock.Mock()
+    split_years._interesting = mock.Mock(return_value=iter([
+        '1108447 1992 1 1 foo\n',    # first day
+        '1108447 1992 3 5 foo\n',    # day in range
+        '1108447 1993 12 31 foo\n',  # end before last day
+    ]))
+    m_open = mock.mock_open()
+    with mock.patch('tools.split_years.open', m_open, create=True):
+        split_years.take_action(parsed_args)
+    m_open.assert_called_once_with('foo', 'rt')
+    split_years.log.warning.assert_called_once_with(
+        '1992/1993 data is incomplete - no output')
 
 
 @pytest.mark.parametrize(
