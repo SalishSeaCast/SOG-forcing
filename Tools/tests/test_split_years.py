@@ -181,3 +181,9 @@ def test_wind_read_date(split_years):
     line = '08 02 2014 16.0 -0.435779 -4.980973\n'
     data_date = split_years._wind_read_date(line)
     assert data_date == arrow.get(2014, 2, 8)
+
+
+def test_river_read_date(split_years):
+    line = '  2012      7      1  10034\n'
+    data_date = split_years._river_read_date(line)
+    assert data_date == arrow.get(2012, 7, 1)
