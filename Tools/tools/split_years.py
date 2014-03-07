@@ -71,7 +71,9 @@ class SplitYears(cliff.command.Command):
         read_date = date_readers[parsed_args.data_type]
         for year in range(parsed_args.start_year, parsed_args.end_year):
             first_day = arrow.get(year, 1, 1)
-            last_day = arrow.get(year + 2, 1, 1)
+            # SOG expects to read 366 days per year as a hack to handle
+            # leap-years
+            last_day = first_day.replace(days=+731)
             chunk_lines = []
             with open(parsed_args.file, 'rt') as data:
                 interesting_lines = self._interesting(
