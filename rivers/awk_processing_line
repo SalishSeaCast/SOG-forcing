@@ -1,0 +1,1 @@
+awk '{FS="[, /]"} {if (NR > 2) print $3,"  ",$4,"  ",$5,"  ",$6}' Daily__Apr-25-2015_07_33_18PM__ddf.csv > englishman_2013_archive.dat
