@@ -5,7 +5,7 @@ cliff==1.5.2
 cmd2==0.6.7
 coverage==3.7.1
 prettytable==0.7.2
-py==1.4.20
+py==1.10.0
 pyparsing==2.0.1
 pytest==2.5.2
 python-dateutil==2.2
