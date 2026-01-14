@@ -11,7 +11,7 @@ colorama==0.4.6
 coverage==7.4.0
 distlib==0.3.8
 exceptiongroup==1.2.0
-filelock==3.20.1
+filelock==3.20.3
 importlib-metadata==7.0.1
 iniconfig==2.0.0
 packaging==23.2
